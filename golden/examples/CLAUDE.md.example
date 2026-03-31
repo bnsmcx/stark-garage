@@ -1,0 +1,85 @@
+# Project Configuration
+
+## Development Philosophy
+
+- **TDD:** Write tests first. Red, green, refactor. No exceptions.
+- **Issue-Driven:** All work tracked via the project's issue tracker.
+- **Plan Before Building:** Plan mode for 3+ step tasks or architectural decisions. If implementation hits unexpected complexity, stop and re-plan.
+- **Fix Bugs Autonomously:** Given logs, errors, or failing tests — diagnose and resolve directly.
+- **Challenge Your Work:** For non-trivial changes, pause and ask "is there a more elegant way?" before presenting.
+- No credentials, secrets, or .env files committed.
+
+## Subagent Strategy
+
+- Offload research, exploration, and parallel analysis to subagents
+- One focused task per subagent — results summarized back to main thread
+
+## Session Start
+
+1. Review `.claude/lessons.md` for patterns relevant to current work. If >40 entries, flag for pruning.
+2. Query memory for relevant lessons: `toolbox-memory search --ns lesson --query '<current scope>'`
+3. Assess state: run `/triage` or check the task tracker
+4. Decide next action: continue interrupted work, pick next task, or plan new work
+
+## Continuous Improvement
+
+Maintain `.claude/lessons.md` with patterns from corrections and reviews. See `agent_docs/self-improvement.md` for format and triggers. Lessons also persist to SQLite memory via `toolbox-memory`.
+
+## Issue Tracker
+
+**Tool:** GitHub CLI (`gh`) | **Format:** `#NN` | **Smart close:** `Closes #NN` | **Deps:** `- Blocked by: #NN — reason`
+For issue format specs, see `agent_docs/issue-conventions.md`. For CLI operations, see `agent_docs/issue-tracker-ops.md`.
+
+## Commit Conventions
+
+Conventional commits: `type(scope): description` with smart close syntax.
+Types: `feat`, `fix`, `refactor`, `docs`, `discovery`, `design`, `infra`.
+Never force-push or rewrite history on shared branches.
+
+## PR Workflow
+
+- Every change gets a PR. Branch naming: `{issue-number}-{slug}`
+- Feature branches target release branch (if exists), otherwise `main`
+- Use `/review-pr` before merging. One issue per branch.
+
+## Pre-existing Failures
+
+If a test file you did NOT modify is failing, create an issue and continue. Do not silently work around it.
+
+## Reference Docs
+
+| Doc | When to read |
+|-----|-------------|
+| `agent_docs/issue-conventions.md` | Creating or editing issues |
+| `agent_docs/issue-tracker-ops.md` | Running issue tracker CLI commands |
+| `agent_docs/self-improvement.md` | Updating lessons.md or memory |
+| `agent_docs/build-and-test.md` | Building, testing, or running the project |
+| `agent_docs/project-structure.md` | Understanding project layout |
+
+<!-- bootstrap: project-specific below -->
+
+## Project Overview
+
+**Project:** Athena v2 Services
+**Architecture:** Layered Go API (cmd -> api/handlers -> services -> storage/repository -> PostgreSQL) + Java MPXJ microservice
+**Tech Stack:** Go 1.25 (chi, GORM, JWT/SAML, OTEL), Java 17 (Spring Boot), Docker Compose, PostgreSQL, Azure Blob
+
+## How to Build / Test / Run
+
+**Validation command:** `make ci-checks` — runs format, vet, lint, mod tidy, vulncheck, and tests. Hard gate for all workflow commands.
+For all build/test/run commands, see `agent_docs/build-and-test.md`.
+
+## Issue Scopes
+
+Scopes for commit messages and issue titles:
+- `api`: HTTP handlers, routing, middleware (`internal/api/`)
+- `storage`: Repository pattern, database queries (`internal/storage/`)
+- `auth`: JWT, SAML, authentication/authorization (`internal/auth/`)
+- `mpxj`: Java MPXJ microservice (`mpxj-service/`)
+
+## Architecture Rules
+
+- Handlers call services, services call repositories. No layer skipping.
+- All database access through repository interfaces.
+- MPXJ service accessed only through HTTP client (`internal/mpxj/`), never direct import.
+- Swagger generation required after handler annotation changes: `make swag`.
