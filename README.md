@@ -24,7 +24,7 @@ claude
 
 # Or plan a feature, create GitHub issues, and ship a release:
 > /investigate add user authentication
-> /create-issues me
+> /create-issues me                    # "me" assigns issues to you; also accepts a username or omit for unassigned
 > /setup-release
 > /wiggum
 ```
@@ -93,7 +93,7 @@ It comes back with a structured impact analysis:
 You iterate — "What about the admin panel?" — and it explores further. Once you're aligned on scope:
 
 ```
-> /create-issues me
+> /create-issues me          # assign all issues to you; or: /create-issues ben, /create-issues (unassigned)
 ```
 
 Create-issues detects the plan from your conversation, drafts a tracking epic plus 6 implementation issues with explicit dependencies (`- Blocked by: #91 -- needs roles table before middleware`), validates the dependency graph for cycles, and presents everything for your approval before creating.
@@ -312,7 +312,7 @@ Slim measures every file against its budget, scans for redundant instructions (d
 |---------|-------------|
 | `/wiggum 53` | Implement a single issue end-to-end (TDD, review, close) |
 | `/wiggum` | Autonomous release loop with full agent pipeline |
-| `/create-issues` | Create one issue or batch from a plan (auto-detects) |
+| `/create-issues [assignee]` | Create one issue or batch from a plan (auto-detects). Assignee: `me`, a username, or omit for unassigned |
 | `/review-pr 42` | 7-section standardized PR review |
 | `/review-pr 42 --deep` | Escalate to 3 parallel agent reviewers |
 | `/close-issue 53` | Validate acceptance criteria, close, unblock downstream |
