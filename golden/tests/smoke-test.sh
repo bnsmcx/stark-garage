@@ -90,10 +90,20 @@ check ".mcp.json has chrome-devtools" grep -q "chrome-devtools" "$TARGET/.mcp.js
 # --- Verify CLAUDE.md has bootstrap marker ---
 check "CLAUDE.md has bootstrap marker" grep -q "bootstrap: project-specific below" "$TARGET/CLAUDE.md"
 
-# --- Verify idempotency (re-deploy should not overwrite CLAUDE.md) ---
+# --- Verify idempotency (re-deploy with "skip" preserves CLAUDE.md) ---
 echo "test-marker" >> "$TARGET/CLAUDE.md"
-"$SCRIPT_DIR/deploy.sh" "$TARGET" >/dev/null 2>&1
-check "Re-deploy preserves CLAUDE.md" grep -q "test-marker" "$TARGET/CLAUDE.md"
+echo "s" | "$SCRIPT_DIR/deploy.sh" "$TARGET" >/dev/null 2>&1
+check "Re-deploy skip preserves CLAUDE.md" grep -q "test-marker" "$TARGET/CLAUDE.md"
+
+# --- Verify overwrite option works ---
+echo "o" | "$SCRIPT_DIR/deploy.sh" "$TARGET" >/dev/null 2>&1
+if grep -q "test-marker" "$TARGET/CLAUDE.md" 2>/dev/null; then
+  echo "  FAIL  Re-deploy overwrite replaces CLAUDE.md"
+  FAIL=$((FAIL + 1))
+else
+  echo "  PASS  Re-deploy overwrite replaces CLAUDE.md"
+  PASS=$((PASS + 1))
+fi
 
 # --- Verify templates were NOT deployed ---
 check "build-and-test.md.template NOT deployed" test ! -f "$TARGET/agent_docs/build-and-test.md.template"

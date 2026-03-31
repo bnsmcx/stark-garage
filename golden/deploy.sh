@@ -6,6 +6,7 @@ set -euo pipefail
 
 GOLDEN_DIR="$(cd "$(dirname "$0")" && pwd)"
 TARGET="${1:?Usage: ./deploy.sh /path/to/project}"
+ERRORS=()
 
 if [ ! -d "$TARGET" ]; then
   echo "Error: $TARGET is not a directory"
@@ -59,21 +60,52 @@ fi
 echo "Deploying Agentic Engineering Toolbox to $TARGET"
 echo "================================================"
 
-# --- Copy golden set files ---
-
-# CLAUDE.md — only if it doesn't exist (don't overwrite project config)
+# --- CLAUDE.md — ask before overwriting ---
 if [ ! -f "$TARGET/CLAUDE.md" ]; then
   cp "$GOLDEN_DIR/CLAUDE.md" "$TARGET/CLAUDE.md"
   echo "[+] CLAUDE.md"
 else
-  echo "[=] CLAUDE.md exists, skipping (use /update-claude to sync)"
+  echo ""
+  echo "CLAUDE.md already exists at $TARGET/CLAUDE.md"
+  echo "  (o) Overwrite with golden set baseline"
+  echo "  (m) Merge — append golden set baseline above the bootstrap marker, keep project-specific content"
+  echo "  (s) Skip — keep existing file unchanged"
+  read -p "Choice [o/m/s]: " -n 1 -r
+  echo ""
+  case "$REPLY" in
+    o|O)
+      cp "$GOLDEN_DIR/CLAUDE.md" "$TARGET/CLAUDE.md"
+      echo "[+] CLAUDE.md (overwritten)"
+      ;;
+    m|M)
+      # Extract project-specific content (below the bootstrap marker)
+      MARKER="<!-- bootstrap: project-specific below -->"
+      if grep -q "$MARKER" "$TARGET/CLAUDE.md"; then
+        # Keep everything from the marker onward
+        PROJECT_SPECIFIC=$(sed -n "/$MARKER/,\$p" "$TARGET/CLAUDE.md")
+        cp "$GOLDEN_DIR/CLAUDE.md" "$TARGET/CLAUDE.md"
+        # Append the project-specific content (golden CLAUDE.md already has the marker)
+        # Replace golden's marker-and-below with the project's marker-and-below
+        GOLDEN_ABOVE_MARKER=$(sed "/$MARKER/,\$d" "$GOLDEN_DIR/CLAUDE.md")
+        printf '%s\n%s\n' "$GOLDEN_ABOVE_MARKER" "$PROJECT_SPECIFIC" > "$TARGET/CLAUDE.md"
+        echo "[+] CLAUDE.md (merged — golden baseline + your project config)"
+      else
+        echo "[!] No bootstrap marker found in existing CLAUDE.md. Cannot merge."
+        echo "    Keeping existing file. Use /update-claude for manual sync."
+        ERRORS+=("CLAUDE.md merge failed — no bootstrap marker in existing file")
+      fi
+      ;;
+    *)
+      echo "[=] CLAUDE.md skipped"
+      ;;
+  esac
 fi
 
 # BUDGETS.md
 cp "$GOLDEN_DIR/BUDGETS.md" "$TARGET/BUDGETS.md"
 echo "[+] BUDGETS.md"
 
-# .claude/ directory (commands, agents, settings, skills)
+# .claude/ directory structure
 mkdir -p "$TARGET/.claude/commands"
 mkdir -p "$TARGET/.claude/agents/extensions"
 mkdir -p "$TARGET/.claude/skills/browser-automation"
@@ -149,43 +181,96 @@ else
   echo "[=] .mcp.json exists, skipping"
 fi
 
-# --- Install dependencies ---
+# --- Build and install toolbox-memory ---
 echo ""
-echo "Installing browser automation dependencies..."
+echo "Building toolbox-memory..."
 
-# agent-browser CLI
-if command -v agent-browser &> /dev/null; then
-  echo "[=] agent-browser already installed"
-else
-  echo "[*] Installing agent-browser..."
-  npm install -g agent-browser 2>/dev/null || echo "[!] Failed to install agent-browser (run: npm install -g agent-browser)"
-fi
-
-# toolbox-memory CLI
 if command -v toolbox-memory &> /dev/null; then
-  echo "[=] toolbox-memory already installed"
+  echo "[=] toolbox-memory already on PATH"
 else
-  echo "[!] toolbox-memory not found. Build from golden/cmd/toolbox-memory/ and add to PATH."
+  if command -v go &> /dev/null; then
+    INSTALL_DIR="${GOBIN:-$(go env GOPATH)/bin}"
+    echo "[*] Building toolbox-memory and installing to $INSTALL_DIR ..."
+    if (cd "$GOLDEN_DIR" && go build -o "$INSTALL_DIR/toolbox-memory" ./cmd/toolbox-memory/) 2>&1; then
+      echo "[+] toolbox-memory installed to $INSTALL_DIR/toolbox-memory"
+      # Verify it's on PATH now
+      if ! command -v toolbox-memory &> /dev/null; then
+        echo "[!] toolbox-memory built but $INSTALL_DIR is not on your PATH"
+        echo "    Add this to your shell profile: export PATH=\"\$PATH:$INSTALL_DIR\""
+        ERRORS+=("toolbox-memory built at $INSTALL_DIR/toolbox-memory but not on PATH")
+      fi
+    else
+      echo "[!] Failed to build toolbox-memory"
+      ERRORS+=("toolbox-memory build failed — run: cd $GOLDEN_DIR && go build -o /usr/local/bin/toolbox-memory ./cmd/toolbox-memory/")
+    fi
+  else
+    echo "[!] go not found — cannot build toolbox-memory"
+    ERRORS+=("toolbox-memory not built — go is not installed")
+  fi
 fi
 
 # Initialize memory database
 if [ ! -f "$TARGET/.claude/memory/toolbox.db" ]; then
   if command -v toolbox-memory &> /dev/null; then
-    toolbox-memory init --db "$TARGET/.claude/memory/toolbox.db" 2>/dev/null || echo "[!] Failed to init memory db"
-    echo "[+] .claude/memory/toolbox.db initialized"
+    if toolbox-memory init --db "$TARGET/.claude/memory/toolbox.db" 2>&1; then
+      echo "[+] .claude/memory/toolbox.db initialized"
+    else
+      echo "[!] Failed to init memory db"
+      ERRORS+=("memory database initialization failed")
+    fi
   else
-    echo "[!] Skipping memory db init (toolbox-memory not installed)"
+    echo "[!] Skipping memory db init (toolbox-memory not available)"
+    ERRORS+=("memory database not initialized — toolbox-memory not on PATH")
+  fi
+fi
+
+# --- Install browser automation ---
+echo ""
+echo "Installing browser automation..."
+
+if command -v agent-browser &> /dev/null; then
+  echo "[=] agent-browser already installed"
+else
+  if command -v npm &> /dev/null; then
+    echo "[*] Installing agent-browser..."
+    # Try user-local install first, fall back to global with sudo
+    if npm install -g agent-browser 2>/dev/null; then
+      echo "[+] agent-browser installed"
+    elif sudo -n npm install -g agent-browser 2>/dev/null; then
+      echo "[+] agent-browser installed (via sudo)"
+    else
+      echo "[!] Could not install agent-browser globally (permission denied)"
+      echo "    Fix: run 'sudo npm install -g agent-browser'"
+      echo "    Or configure npm for user-local installs: npm config set prefix ~/.npm-global"
+      ERRORS+=("agent-browser not installed — npm global install permission denied")
+    fi
+  else
+    echo "[!] npm not found — cannot install agent-browser"
+    ERRORS+=("agent-browser not installed — npm not found")
   fi
 fi
 
 # --- Summary ---
 echo ""
 echo "================================================"
-echo "Deployment complete."
+
+if [ ${#ERRORS[@]} -gt 0 ]; then
+  echo "Deployment completed with ${#ERRORS[@]} issue(s):"
+  echo ""
+  for err in "${ERRORS[@]}"; do
+    echo "  [!] $err"
+  done
+  echo ""
+  echo "Fix the issues above, then re-run deploy.sh."
+  echo "(File deployment is complete — only tool installation needs attention.)"
+else
+  echo "Deployment complete. No issues."
+fi
+
 echo ""
-echo "Installed:"
 CMDS=$(ls "$TARGET/.claude/commands/"*.md 2>/dev/null | wc -l)
 AGENTS=$(ls "$TARGET/.claude/agents/"*.md 2>/dev/null | wc -l)
+echo "Installed:"
 echo "  $CMDS commands"
 echo "  $AGENTS agents"
 echo "  agent_docs/, skills/, memory/"
