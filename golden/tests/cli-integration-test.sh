@@ -1,0 +1,193 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# CLI integration test for toolbox-memory
+# Usage: ./tests/cli-integration-test.sh
+
+SCRIPT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+BINARY="$SCRIPT_DIR/toolbox-memory"
+DB="$(mktemp -d)/test.db"
+PASS=0
+FAIL=0
+
+cleanup() {
+  rm -rf "$(dirname "$DB")"
+}
+trap cleanup EXIT
+
+check() {
+  local desc="$1"
+  shift
+  if "$@" >/dev/null 2>&1; then
+    echo "  PASS  $desc"
+    PASS=$((PASS + 1))
+  else
+    echo "  FAIL  $desc ($*)"
+    FAIL=$((FAIL + 1))
+  fi
+}
+
+check_output() {
+  local desc="$1"
+  local expected="$2"
+  shift 2
+  local output
+  output=$("$@" 2>&1) || true
+  if echo "$output" | grep -q "$expected"; then
+    echo "  PASS  $desc"
+    PASS=$((PASS + 1))
+  else
+    echo "  FAIL  $desc (expected '$expected' in output)"
+    echo "        got: $output"
+    FAIL=$((FAIL + 1))
+  fi
+}
+
+# --- Build binary if needed ---
+if [ ! -f "$BINARY" ]; then
+  echo "Building toolbox-memory..."
+  (cd "$SCRIPT_DIR" && go build -o toolbox-memory ./cmd/toolbox-memory/)
+fi
+
+echo "=== CLI Integration Test ==="
+echo "Binary: $BINARY"
+echo "DB:     $DB"
+echo ""
+
+# --- version ---
+check_output "version" "0.1.0" "$BINARY" version
+
+# --- init ---
+check_output "init creates db" "initialized" "$BINARY" init --db "$DB"
+check "db file exists after init" test -f "$DB"
+
+# --- write ---
+check_output "write returns ok" '"status": "ok"' \
+  "$BINARY" write --db "$DB" --ns lesson --agent pomo --key "test-pattern-1" --value '{"wrong":"bad approach","right":"good approach","why":"because"}'
+
+check_output "write second entry" '"status": "ok"' \
+  "$BINARY" write --db "$DB" --ns bug_pattern --agent debugger --key "nil-pointer-reset" --value '{"class":"state-corruption","prevention":"reconstruct after destroy"}'
+
+check_output "write third entry" '"status": "ok"' \
+  "$BINARY" write --db "$DB" --ns lesson --agent pomo --key "test-pattern-2" --value '{"wrong":"wrong way","right":"right way","why":"reasons"}'
+
+# --- read ---
+check_output "read returns entry" '"key": "test-pattern-1"' \
+  "$BINARY" read --db "$DB" --ns lesson --key "test-pattern-1"
+
+check_output "read returns value" "bad approach" \
+  "$BINARY" read --db "$DB" --ns lesson --key "test-pattern-1"
+
+# --- read increments hit_count ---
+# Read twice more, then check hitCount
+"$BINARY" read --db "$DB" --ns lesson --key "test-pattern-1" >/dev/null 2>&1
+OUTPUT=$("$BINARY" read --db "$DB" --ns lesson --key "test-pattern-1" 2>&1)
+if echo "$OUTPUT" | grep -q '"hitCount": [3-9]'; then
+  echo "  PASS  read increments hitCount (3+ after 3 reads)"
+  PASS=$((PASS + 1))
+else
+  echo "  FAIL  read increments hitCount"
+  echo "        got: $(echo "$OUTPUT" | grep hitCount)"
+  FAIL=$((FAIL + 1))
+fi
+
+# --- search ---
+check_output "search finds entry" "test-pattern-1" \
+  "$BINARY" search --db "$DB" --ns lesson --query "bad approach"
+
+check_output "search respects namespace" "nil-pointer" \
+  "$BINARY" search --db "$DB" --ns bug_pattern --query "state corruption"
+
+# Search in wrong namespace should not find it
+OUTPUT=$("$BINARY" search --db "$DB" --ns lesson --query "state corruption destroy" 2>&1)
+if echo "$OUTPUT" | grep -q "nil-pointer-reset"; then
+  echo "  FAIL  search namespace isolation (found bug_pattern entry in lesson ns)"
+  FAIL=$((FAIL + 1))
+else
+  echo "  PASS  search namespace isolation"
+  PASS=$((PASS + 1))
+fi
+
+# --- list ---
+OUTPUT=$("$BINARY" list --db "$DB" --ns lesson 2>&1)
+COUNT=$(echo "$OUTPUT" | grep -c '"key"' || true)
+if [ "$COUNT" -eq 2 ]; then
+  echo "  PASS  list returns 2 lesson entries"
+  PASS=$((PASS + 1))
+else
+  echo "  FAIL  list returns $COUNT entries, want 2"
+  FAIL=$((FAIL + 1))
+fi
+
+# --- stats ---
+check_output "stats shows active" '"active": 3' \
+  "$BINARY" stats --db "$DB"
+
+check_output "stats shows total" '"total": 3' \
+  "$BINARY" stats --db "$DB"
+
+# --- promote ---
+check_output "promote returns ok" '"status": "promoted"' \
+  "$BINARY" promote --db "$DB" --ns lesson --key "test-pattern-1" --to "CLAUDE.md Development Philosophy"
+
+# Verify promoted entry shows in stats
+check_output "stats shows promoted" '"promoted": 1' \
+  "$BINARY" stats --db "$DB"
+
+# Verify promoted entry excluded from list
+OUTPUT=$("$BINARY" list --db "$DB" --ns lesson 2>&1)
+if echo "$OUTPUT" | grep -q "test-pattern-1"; then
+  echo "  FAIL  list excludes promoted entries"
+  FAIL=$((FAIL + 1))
+else
+  echo "  PASS  list excludes promoted entries"
+  PASS=$((PASS + 1))
+fi
+
+# --- prune (with nothing to prune) ---
+check_output "prune with nothing to do" '"transitions": 0' \
+  "$BINARY" prune --db "$DB"
+
+# --- write + upsert ---
+check_output "upsert updates value" '"status": "ok"' \
+  "$BINARY" write --db "$DB" --ns lesson --agent pomo --key "test-pattern-2" --value '{"wrong":"updated wrong","right":"updated right","why":"updated"}'
+
+check_output "upsert preserved key" "updated wrong" \
+  "$BINARY" read --db "$DB" --ns lesson --key "test-pattern-2"
+
+# --- delete ---
+check_output "delete returns ok" '"status": "deleted"' \
+  "$BINARY" delete --db "$DB" --ns lesson --key "test-pattern-2"
+
+# Verify deleted
+OUTPUT=$("$BINARY" read --db "$DB" --ns lesson --key "test-pattern-2" 2>&1) && {
+  echo "  FAIL  delete removes entry (read succeeded)"
+  FAIL=$((FAIL + 1))
+} || {
+  echo "  PASS  delete removes entry (read failed as expected)"
+  PASS=$((PASS + 1))
+}
+
+# --- error cases ---
+OUTPUT=$("$BINARY" write --db "$DB" 2>&1) && {
+  echo "  FAIL  write without required flags should fail"
+  FAIL=$((FAIL + 1))
+} || {
+  echo "  PASS  write without required flags exits non-zero"
+  PASS=$((PASS + 1))
+}
+
+OUTPUT=$("$BINARY" search --db "$DB" 2>&1) && {
+  echo "  FAIL  search without required flags should fail"
+  FAIL=$((FAIL + 1))
+} || {
+  echo "  PASS  search without required flags exits non-zero"
+  PASS=$((PASS + 1))
+}
+
+echo ""
+echo "=== Results: $PASS passed, $FAIL failed ==="
+
+if [ "$FAIL" -gt 0 ]; then
+  exit 1
+fi
