@@ -12,6 +12,50 @@ if [ ! -d "$TARGET" ]; then
   exit 1
 fi
 
+# --- Prerequisites check ---
+MISSING=()
+
+if ! command -v git &> /dev/null; then
+  MISSING+=("git — required for all version control operations")
+fi
+
+if ! command -v gh &> /dev/null; then
+  MISSING+=("gh (GitHub CLI) — required for issue tracking, PRs, milestones, and releases (https://cli.github.com)")
+fi
+
+if ! command -v node &> /dev/null || ! command -v npm &> /dev/null; then
+  MISSING+=("node + npm — required for browser automation tools and MCP servers")
+fi
+
+if ! command -v go &> /dev/null; then
+  MISSING+=("go — required to build toolbox-memory CLI (https://go.dev)")
+fi
+
+if ! command -v claude &> /dev/null; then
+  MISSING+=("claude (Claude Code CLI) — required to run the toolbox (https://claude.ai/code)")
+fi
+
+if [ ${#MISSING[@]} -gt 0 ]; then
+  echo "Missing prerequisites:"
+  for dep in "${MISSING[@]}"; do
+    echo "  [!] $dep"
+  done
+  echo ""
+  read -p "Continue anyway? (y/N) " -n 1 -r
+  echo ""
+  if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+    exit 1
+  fi
+fi
+
+# Check gh auth status
+if command -v gh &> /dev/null; then
+  if ! gh auth status &> /dev/null; then
+    echo "[!] gh is installed but not authenticated. Run: gh auth login"
+    echo ""
+  fi
+fi
+
 echo "Deploying Agentic Engineering Toolbox to $TARGET"
 echo "================================================"
 
