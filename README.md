@@ -2,7 +2,9 @@
 
 An agentic engineering toolbox for Claude Code. 13 slash commands and 7 specialized agents that handle everything from a single bug fix to a full autonomous release with parallel builds and deep security review.
 
-Built from a synthesis of two production-tested systems keeping what worked and cutting what didn't.
+**GitHub Issues are the backbone.** Every piece of work is a GitHub issue. Specs live in issue bodies. Dependencies are tracked in issue bodies. Milestones scope releases. The `gh` CLI drives everything. This toolbox is tightly coupled to GitHub by design — issues aren't just tickets, they're the state machine that the entire pipeline reads and writes.
+
+Built from a synthesis of two production-tested systems (the [Avengers](https://github.com/bnsmcx/Avengers) pipeline and a composable [Skills](https://github.com/bnsmcx/claude-skills) system), keeping what worked and cutting what didn't.
 
 ## Quick Start
 
@@ -17,10 +19,10 @@ claude
 # Scan the project and adapt configuration
 > /bootstrap
 
-# You're ready. Fix a bug:
+# You're ready. Pick up a GitHub issue and fix it:
 > /wiggum 53
 
-# Or plan and ship a full release:
+# Or plan a feature, create GitHub issues, and ship a release:
 > /investigate add user authentication
 > /create-issues me
 > /setup-release
@@ -31,9 +33,9 @@ claude
 
 Two modes. No configuration needed — the system figures it out.
 
-**Ad-hoc mode** (`/wiggum 53`) — Fix a single issue. No agents, no overhead. TDD implement, review, close. Done.
+**Ad-hoc mode** (`/wiggum 53`) — Pick up GitHub issue #53, create a branch, TDD implement, review, close the issue. No agents, no overhead.
 
-**Release mode** (`/setup-release` then `/wiggum`) — Full autonomous pipeline:
+**Release mode** (`/setup-release` then `/wiggum`) — Scope GitHub issues into a milestone, then run the full autonomous pipeline:
 
 ```
 /setup-release
@@ -385,13 +387,29 @@ The toolbox improves across projects:
 
 Every project benefits from improvements discovered in previous projects.
 
-## State Management
+## State Management — GitHub Issues as the Source of Truth
 
-**GitHub Issues** are the single source of truth for all work. Specs live in issue bodies (enriched by Planner). Dependencies use the canonical format: `- Blocked by: #NN -- reason`.
+This toolbox is built around GitHub Issues as the single state machine for all work. Not a separate project tracker, not a local task file — GitHub Issues, managed via the `gh` CLI.
 
-**Project state file** (`.claude/project-state.md`) is a codebase cache — packages, endpoints, schemas, coverage. Built by the Indexer agent. Read by Planner for context. Never used for task tracking.
+**What lives in issues:**
+- **Task definitions** — summary, acceptance criteria, implementation notes
+- **Specs** — the Planner agent enriches issue bodies directly with schemas, API shapes, and known pitfalls
+- **Dependencies** — canonical format `- Blocked by: #NN -- reason`, parsed by every command
+- **Status** — open or closed, nothing more complex
+- **Release scope** — issues are assigned to milestones by `/setup-release`
 
-One methodology, no parallel systems.
+**What commands do with issues:**
+- `/create-issues` creates them (single or batch with dependency graph)
+- `/triage` parses all dependencies, builds the graph, computes impact scores
+- `/setup-release` filters them into milestones, runs blast radius per issue
+- `/wiggum` implements them in dependency order, one branch per issue
+- `/close-issue` validates acceptance criteria and closes them, auto-unblocking downstream
+- `/review-pr` links PRs back to issues via `Closes #NN` smart-close syntax
+
+**What does NOT live in issues:**
+- Codebase structure — that's the project state file (`.claude/project-state.md`), a cache built by the Indexer agent. It tracks packages, endpoints, schemas, and coverage. Agents read it for context. It never tracks tasks.
+
+There's a `tasks/todo.md` fallback for projects without a GitHub remote, but the full pipeline (milestones, labels, dependency unblocking, release PRs) requires GitHub Issues.
 
 ## Project Structure
 
