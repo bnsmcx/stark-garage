@@ -2,7 +2,7 @@
 
 An agentic engineering toolbox for Claude Code. 13 slash commands and 7 specialized agents that handle everything from a single bug fix to a full autonomous release with parallel builds and deep security review.
 
-Built from a synthesis of two production-tested systems (the [Avengers](https://github.com/bnsmcx/Avengers) pipeline and a composable [Skills](https://github.com/bnsmcx/claude-skills) system), keeping what worked and cutting what didn't.
+Built from a synthesis of two production-tested systems keeping what worked and cutting what didn't.
 
 ## Quick Start
 
