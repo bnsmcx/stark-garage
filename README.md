@@ -23,10 +23,10 @@ claude
 > /wiggum 53
 
 # Or plan a feature, create GitHub issues, and ship a release:
-> /investigate add user authentication
-> /create-issues me                    # "me" assigns issues to you; also accepts a username or omit for unassigned
-> /setup-release
-> /wiggum
+> /investigate add user authentication  # deep-dive the feature (read-only, iterates with you)
+> /create-issues me                     # "me" = assign to you; or: username, or omit for unassigned
+> /setup-release enhancement            # scope enhancement issues into a release; also: bugs, docs, or interactive
+> /wiggum                               # autonomous loop — implements every issue in dependency order
 ```
 
 ## How It Works
@@ -306,25 +306,154 @@ If the golden set is getting bloated:
 
 Slim measures every file against its budget, scans for redundant instructions (duplicated in commands, or trained-in behavior Claude already knows), prunes stale lessons, runs `toolbox-memory prune` for memory lifecycle transitions, and reports before/after utilization.
 
-## Commands
+## Command Reference
 
-| Command | What it does |
-|---------|-------------|
-| `/wiggum 53` | Implement a single issue end-to-end (TDD, review, close) |
-| `/wiggum` | Autonomous release loop with full agent pipeline |
-| `/create-issues [assignee]` | Create one issue or batch from a plan (auto-detects). Assignee: `me`, a username, or omit for unassigned |
-| `/review-pr 42` | 7-section standardized PR review |
-| `/review-pr 42 --deep` | Escalate to 3 parallel agent reviewers |
-| `/close-issue 53` | Validate acceptance criteria, close, unblock downstream |
-| `/triage` | Dependency graph, impact scores, label validation |
-| `/investigate` | Deep-dive a feature request before building |
-| `/setup-release` | Blast radius + index + milestone + branch + phased plan |
-| `/blast-radius` | Trace imports, call chains, test coverage for a target |
-| `/pomo` | Post-mortem reflection, captures lessons to memory |
-| `/bootstrap` | Scan project, detect stack, adapt toolbox configuration |
-| `/update-claude` | Pull golden set updates into a project |
-| `/improve-golden-set` | Extract improvements back to the golden set |
-| `/slim` | Audit for bloat, prune lessons and memory |
+### `/wiggum` — The Workhorse
+
+Implements issues end-to-end. Ad-hoc mode for single issues, release mode for full autonomous pipeline.
+
+```
+/wiggum 53                  # Ad-hoc: implement issue #53 (no agents, no release context)
+/wiggum                     # Release: auto-detect release branch + milestone, loop all issues
+/wiggum release/v2.1        # Release: target a specific release branch
+```
+
+No arguments and on a release branch = release mode with full agent pipeline. A bare issue number = ad-hoc mode, fast path.
+
+### `/create-issues` — Issue Creation
+
+Creates GitHub issues from a description or plan. Auto-detects whether you're describing one thing or a multi-step plan.
+
+```
+/create-issues              # Create from conversation context, leave unassigned
+/create-issues me           # Assign to you (resolves via `gh api user`)
+/create-issues ben          # Assign to collaborator (fuzzy-matches against repo collaborators)
+```
+
+Single description = one issue. Numbered plan or multi-step breakdown = tracking epic + ordered children with dependency graph.
+
+### `/review-pr` — PR Review
+
+7-section standardized review. Posts structured verdict on the PR.
+
+```
+/review-pr 42               # Standard review (metadata, architecture, quality, tests, security, build gates)
+/review-pr 42 --diff-only   # Skip build gates, review code changes only
+/review-pr 42 --deep        # Escalate to 3 parallel agent reviewers (Reviewer + Security + Ops)
+```
+
+`--deep` is also auto-triggered when the PR targets `main` or `release/*`, or touches auth/security/migration files.
+
+### `/close-issue` — Acceptance Validation & Closure
+
+Validates every acceptance criterion before closing. Unblocks downstream issues automatically.
+
+```
+/close-issue 53             # Validate and close issue #53
+/close-issue 53 54 55       # Close multiple issues
+```
+
+Runs the project's validation command as a hard gate, checks each acceptance criterion, posts structured closing comment, removes `blocked` label from downstream issues whose blockers are now all closed.
+
+### `/triage` — Backlog Analysis
+
+Builds the full dependency graph, computes impact scores, validates labels.
+
+```
+/triage                     # Analyze all open issues in the repo
+```
+
+No arguments. Fetches all open issues, parses `- Blocked by: #NN` dependencies, detects cycles, scores each issue by how many others it transitively unblocks, flags label inconsistencies. Offers to auto-fix stale labels.
+
+### `/investigate` — Feature Research
+
+Deep-dive a feature request before building anything. Read-only exploration with parallel subagents.
+
+```
+/investigate                           # Prompt for the feature description
+/investigate add role-based access     # Inline description
+/investigate #42                       # Pull context from an existing GitHub issue
+```
+
+Probes the codebase and running API, surfaces an impact analysis table, iterates with you on scope, and outputs a structured plan ready for `/create-issues`.
+
+### `/setup-release` — Release Preparation
+
+Scopes issues into a release, runs blast-radius analysis, indexes the codebase, creates milestone + branch + draft PR.
+
+```
+/setup-release                         # Interactive — asks what to include
+/setup-release bugs                    # Filter: issues labeled "bug"
+/setup-release enhancement             # Filter: issues labeled "enhancement"
+/setup-release enhancement 10-25       # Filter by label + specific issue number range
+```
+
+No arguments = interactive (asks what you want to release). Label keywords (`bugs`, `enhancement`, `docs`) filter issues. A number range (`10-25`) includes specific issues regardless of labels. You can combine both.
+
+### `/blast-radius` — Impact Analysis
+
+Traces imports, call chains, test coverage, and downstream consumers for a code target.
+
+```
+/blast-radius UserService              # Analyze a type or interface
+/blast-radius HandleCreateUser         # Analyze a function
+/blast-radius internal/auth/middleware  # Analyze a file or directory
+/blast-radius #42                      # Analyze the files likely affected by a GitHub issue
+```
+
+Read-only. Also called internally by `/setup-release` on each issue in the release.
+
+### `/pomo` — Post-Mortem
+
+Captures lessons from debugging sessions. Writes to both `lessons.md` and SQLite memory.
+
+```
+/pomo                                  # Reflect on what just happened in this session
+/pomo #42                              # Reflect on a specific issue
+/pomo https://github.com/.../pull/10   # Reflect on a specific PR
+```
+
+Also auto-invoked by `/wiggum` after 2+ retry attempts and by `/review-pr` after REQUEST_CHANGES on Claude-authored PRs. Checks memory for duplicates, manages lesson lifecycle, flags promotion candidates.
+
+### `/bootstrap` — Project Setup
+
+Scans the project, detects tech stack, adapts the toolbox configuration.
+
+```
+/bootstrap                             # No arguments — interactive scan and setup
+```
+
+Run once after `deploy.sh`. Detects language, framework, build tools, CI/CD, project structure. Asks you to confirm, then writes project-specific sections to CLAUDE.md, generates `agent_docs/build-and-test.md` and `agent_docs/project-structure.md`, configures MCP servers and permissions.
+
+### `/update-claude` — Pull Golden Set Updates
+
+Syncs improvements from the golden set into a bootstrapped project without overwriting customizations.
+
+```
+/update-claude ~/path/to/golden-set    # Path to golden set repo (required)
+```
+
+Diffs your project's baseline against the golden set, shows what changed, applies only what you approve. Never touches project-specific content below the bootstrap marker.
+
+### `/improve-golden-set` — Extract Improvements
+
+Reverse flow: pull generalizable improvements from a project back into the golden set.
+
+```
+/improve-golden-set ~/path/to/project  # Path to the project to extract from (required)
+```
+
+Classifies project changes as golden-original, modified, or novel. Generalizes before extracting (strips project-specific paths). Budget-aware.
+
+### `/slim` — Audit & Compress
+
+Prevents bloat in CLAUDE.md, agent_docs, lessons, and memory.
+
+```
+/slim                                  # No arguments — audit everything
+```
+
+Measures every file against its budget (see BUDGETS.md), scans for redundant instructions, prunes stale lessons, runs `toolbox-memory prune` for memory lifecycle transitions. Reports before/after utilization.
 
 ## Agents
 
