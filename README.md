@@ -1,6 +1,6 @@
 # Stark Garage
 
-An agentic engineering toolbox for Claude Code. 13 slash commands and 7 specialized agents that handle everything from a single bug fix to a full autonomous release with parallel builds and deep security review.
+An agentic engineering toolbox for Claude Code. 15 slash commands and 7 specialized agents that handle everything from a single bug fix to a full autonomous release with parallel builds and deep security review.
 
 **GitHub Issues are the backbone.** Every piece of work is a GitHub issue. Specs live in issue bodies. Dependencies are tracked in issue bodies. Milestones scope releases. The `gh` CLI drives everything. This toolbox is tightly coupled to GitHub by design — issues aren't just tickets, they're the state machine that the entire pipeline reads and writes.
 
@@ -455,6 +455,28 @@ Prevents bloat in CLAUDE.md, agent_docs, lessons, and memory.
 
 Measures every file against its budget (see BUDGETS.md), scans for redundant instructions, prunes stale lessons, runs `toolbox-memory prune` for memory lifecycle transitions. Reports before/after utilization.
 
+### `/release-notes` — Release PR Description
+
+Generates a comprehensive, user-facing release PR description from closed milestone issues. Produces narrative "What's New" sections, API/database change tables, and implementation progress.
+
+```
+/release-notes                     # Auto-detect release branch + milestone
+/release-notes v0.9.26             # Target a specific version
+```
+
+Categorizes issues by type, writes user-facing narratives, builds endpoint and schema change tables, assembles a full PR body, and applies it via `gh pr edit`.
+
+### `/release-demo` — Release Demo & E2E Validation
+
+Generates an E2E test script from closed milestone issues, runs it, fixes failures, and records a looping VHS gif for the release PR.
+
+```
+/release-demo                      # Auto-detect release branch + milestone
+/release-demo v0.9.26              # Target a specific version
+```
+
+Extracts acceptance criteria and endpoints from closed issues, generates a test script, runs it until green, records a GIF via VHS, and uploads it as a GitHub release asset.
+
 ## Agents
 
 Auto-invoked during release mode. You never call these directly.
@@ -548,7 +570,7 @@ golden/
   BUDGETS.md                         # Line/instruction limits
   deploy.sh                          # Install into any project
   .claude/
-    commands/                        # 13 slash commands
+    commands/                        # 15 slash commands
     agents/                          # 7 agent definitions
     settings.local.json              # Baseline permissions
   agent_docs/                        # On-demand reference docs
@@ -579,7 +601,7 @@ bash tests/cli-integration-test.sh
 
 ## Design Decisions
 
-1. **13 commands + 7 agents**, not 29 agents. Composability over completeness.
+1. **15 commands + 7 agents**, not 29 agents. Composability over completeness.
 2. **Claude Code only.** No Copilot/Cursor variants. Biggest maintenance win.
 3. **Two clean modes.** Ad-hoc or release. No heuristics.
 4. **Memory writes are automatic.** Triggered by events, never manual.
