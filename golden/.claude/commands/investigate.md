@@ -90,6 +90,15 @@ Synthesize the research into a structured assessment:
 | Storage | ... | New queries / new model / migration |
 | Auth/ACL | ... | New permission / existing sufficient |
 
+### Schema/DDL Consistency Check
+If the investigation identifies model or schema changes (new columns, nullable changes, type changes, new tables):
+1. Search for SQL init/migration files that define the affected table(s) (e.g., `docker-entrypoint-initdb.d/`, `migrations/`, `schema.sql`)
+2. Compare the proposed model change against the DDL definition
+3. Flag any constraint mismatches (NOT NULL vs nullable, type differences, missing columns)
+4. Include required DDL changes in the impact analysis
+
+This catches cases where a model change passes CI but fails at runtime because the database schema wasn't updated.
+
 ### Key Findings
 - What exists today that the feature can build on
 - What's missing that needs to be created

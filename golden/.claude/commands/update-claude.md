@@ -6,21 +6,29 @@ user_invocable: true
 
 # /update-claude — Golden Set Update
 
-Run this command from a bootstrapped project. Point it at the golden set repo to pull in new and changed golden set content while preserving all project-specific customizations. This is the forward update flow — after the golden set evolves (via `/improve-golden-set` or direct edits), use this command to propagate those improvements into existing projects.
+Run this command from a bootstrapped project. Fetches the latest golden set content from GitHub and applies updates while preserving all project-specific customizations. This is the forward update flow — after the golden set evolves (via `/improve-golden-set` or direct edits), use this command to propagate those improvements into existing projects.
 
 ## Invocation
 
 ```
-/update-claude ~/dev/shared/dotfiles
+/update-claude                              # Use default repo: bnsmcx/stark-garage
+/update-claude owner/repo                   # Use a specific GitHub repo
+/update-claude ~/dev/shared/dotfiles        # Use a local path (legacy)
 ```
 
-If no path argument is provided, ask the user for one. Do not proceed without a valid path.
+If no argument is provided, use `bnsmcx/stark-garage` as the default.
 
 ## Steps
 
-### 1. Validate the golden set path
+### 1. Validate the golden set source
 
-Confirm the golden set path:
+**GitHub mode** (default — argument is `owner/repo` or omitted):
+- Verify `gh` is authenticated: `gh auth status`
+- Verify the repo exists: `gh repo view OWNER/REPO --json name`
+- Verify `golden/` directory exists: `gh api repos/OWNER/REPO/contents/golden --jq '.[0].name'`
+- Fetch files via: `gh api repos/OWNER/REPO/contents/golden/PATH -q '.content' | base64 -d`
+
+**Local mode** (argument is a filesystem path):
 - Directory exists
 - Has `golden/` subdirectory
 - `golden/CLAUDE.md` exists
@@ -117,7 +125,10 @@ Group findings by type and present each change individually:
 
 - **New items:** List with brief summary. Default: add.
 - **Updated items:** Show diff summary. Default: update.
-- **Diverged items:** Show both versions. Ask user to choose or describe a merge.
+- **Diverged items:** Show both versions. Ask user to choose:
+  - **(a) Accept golden** — overwrite local with golden version
+  - **(b) Keep local** — keep the project's version
+  - **(c) Push local to golden** — the project's version is better, push it upstream via `/improve-golden-set`
 - **Removed from golden:** Flag for awareness. Default: remove.
 
 Wait for user approval before proceeding.

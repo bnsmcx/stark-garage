@@ -6,15 +6,25 @@ user_invocable: true
 
 # /improve-golden-set — Golden Set Extraction
 
-Run this command from the golden set repo. Point it at a bootstrapped project to extract generalizable improvements back into the golden set. This is the reverse flow of `/bootstrap` — instead of deploying config outward, you pull proven improvements inward.
+Extract generalizable improvements from a bootstrapped project back into the golden set. This is the reverse flow of `/bootstrap` — instead of deploying config outward, you pull proven improvements inward.
+
+Can be run from the golden set repo (local mode) or from any project (GitHub mode — pushes a PR to the golden set repo).
 
 ## Invocation
 
 ```
-/improve-golden-set ~/dev/my-project
+/improve-golden-set ~/dev/my-project              # Local: run from golden set repo, point at project
+/improve-golden-set                                # GitHub: run from a bootstrapped project, push PR to golden set repo
+/improve-golden-set --repo owner/repo              # GitHub: specify the golden set repo explicitly
 ```
 
-If no path argument is provided, ask the user for one. Do not proceed without a valid path.
+**GitHub mode** (no path argument or `--repo`):
+- Detects improvements in the current project
+- Creates a branch and PR on the golden set repo via `gh`
+- Default target repo: `bnsmcx/stark-garage`
+
+**Local mode** (path argument):
+- Classic behavior — run from the golden set repo, point at a bootstrapped project
 
 ## Steps
 
@@ -164,11 +174,42 @@ Do NOT commit. Let the user review and commit manually.
 ### Skipped (project-specific):
 - [list of items reviewed but skipped]
 
-### Next Steps:
+### Next Steps (local mode):
 1. Review the changes in golden/
 2. Run `git diff` to verify everything looks correct
 3. Commit when satisfied
+
+### Next Steps (GitHub mode):
+1. PR created at: [URL]
+2. Review the PR on GitHub
+3. Merge when satisfied
 ```
+
+### 10b. Push to GitHub (GitHub mode only)
+
+If running in GitHub mode, push the approved changes as a PR:
+
+```bash
+# Clone the golden set repo to a temp directory
+gh repo clone OWNER/REPO /tmp/golden-set-update
+cd /tmp/golden-set-update
+
+# Create a branch
+git checkout -b improve/$(date +%Y%m%d)-$(basename $PROJECT_DIR)
+
+# Apply the approved changes to golden/
+# ... copy files ...
+
+# Commit and push
+git add golden/
+git commit -m "improve: extract improvements from PROJECT_NAME"
+git push -u origin HEAD
+
+# Create PR
+gh pr create --title "improve: extract improvements from PROJECT_NAME" --body "..."
+```
+
+Report the PR URL to the user.
 
 ### 11. Budget health check
 

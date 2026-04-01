@@ -152,13 +152,24 @@ Builder spawns parallel sub-agents if the issue touches multiple packages. Manag
 
 For single-package issues, implement directly using TDD (same as ad-hoc step 4).
 
+### 6b. Schema/DDL Consistency Check
+
+After implementation, if any model/struct definitions were modified (new fields, nullable changes, type changes):
+1. Search for SQL init/migration files that define the affected table(s)
+2. Verify the DDL matches the model change (nullability, types, constraints, defaults)
+3. If mismatched: update the DDL before proceeding to validation
+
+This prevents the pattern where model changes pass CI but fail at runtime against a real database.
+
 ### 7. Validate
 
 Run validation command. Same retry logic as ad-hoc mode (max 3 attempts). If 2+ retries → `/pomo`.
 
-### 8. Deep Review
+### 8. Deep Review (complexity-gated)
 
-Launch parallel review agents:
+**Complexity check:** Count lines changed and files touched in the current branch vs release branch.
+- If **<50 lines changed AND <3 files touched**: skip per-issue deep review, proceed to Step 10.
+- Otherwise: launch parallel review agents:
 
 > Use reviewer. Review the PR for issue #NN against the spec in the issue body.
 > Use security-reviewer. Security scan the PR for issue #NN.
@@ -168,7 +179,7 @@ All three run in parallel. Aggregate verdicts.
 
 ### 9. Fix Loop
 
-If any reviewer returns NEEDS_FIXES / VULNERABLE / NOT_READY:
+If deep review was triggered and any reviewer returns NEEDS_FIXES / VULNERABLE / NOT_READY:
 
 1. Invoke Debugger agent:
    > Use debugger. Fix the issues found in .claude/reviews/. Prioritize CRITICAL > HIGH > MEDIUM.
@@ -208,9 +219,13 @@ Log completion summary. Check milestone progress. Select next issue. Continue.
 
 When all milestone issues are closed:
 1. Run final validation
-2. Mark draft PR ready for review: `gh pr ready RELEASE_PR_NUMBER`
-3. Do NOT auto-merge to main
-4. Report: milestone complete, PR number, issue count
+2. **Run `/review-pr` on the release PR (hard gate)** — catches cross-issue interactions that per-issue reviews miss
+3. If review returns REQUEST_CHANGES: fix findings, re-review (max 3 iterations)
+4. Run `/release-notes` to generate the full release PR description
+5. Run `/release-demo` to generate the E2E test script, run it, and record the demo gif
+6. Mark draft PR ready for review: `gh pr ready RELEASE_PR_NUMBER`
+7. Do NOT auto-merge to main
+8. Report: milestone complete, PR number, issue count
 
 ## Discovery Escape Hatch
 
