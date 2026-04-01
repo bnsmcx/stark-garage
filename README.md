@@ -4,7 +4,7 @@ An agentic engineering toolbox for Claude Code. 15 slash commands and 7 speciali
 
 **GitHub Issues are the backbone.** Every piece of work is a GitHub issue. Specs live in issue bodies. Dependencies are tracked in issue bodies. Milestones scope releases. The `gh` CLI drives everything. This toolbox is tightly coupled to GitHub by design — issues aren't just tickets, they're the state machine that the entire pipeline reads and writes.
 
-Built from a synthesis of two production-tested systems (the [Avengers](https://github.com/bnsmcx/Avengers) pipeline and a composable [Skills](https://github.com/bnsmcx/claude-skills) system), keeping what worked and cutting what didn't.
+Built from a synthesis of two production-tested systems (the [Avengers](https://github.com/terrancedjones/Avengers) pipeline and a composable [Skills](https://github.com/quadradad/claude-bootstrapping) system), keeping what worked and cutting what didn't.
 
 ## Quick Start
 
