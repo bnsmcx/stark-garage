@@ -1,5 +1,15 @@
 # Changelog
 
+## 2026-04-13 — /improve-golden-set from Athena v2 services-0.9.28
+
+### Changed
+- `/bootstrap` Step 3.3: always add Edit/Write permissions for `.claude/project-state.md` and `.claude/state/*` so the indexer agent can persist codebase index without permission denials
+
+### Budget impact
+- CLAUDE.md baseline: unchanged
+- Commands: bootstrap.md +10 lines
+- agent_docs/: unchanged
+
 ## 2026-04-01 — /improve-golden-set from Athena v2 services-0.9.26
 
 ### Added
