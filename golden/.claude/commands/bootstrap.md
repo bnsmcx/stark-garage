@@ -176,6 +176,17 @@ For project structure and key files, see `agent_docs/project-structure.md`.
 
 Merge project-specific permissions into the existing `allow` array based on detected tech stack (e.g., `Bash(go build:*)` for Go, `Bash(cargo test:*)` for Rust, `Bash(docker:*)` for Docker).
 
+**Always add** indexer state file permissions (required for `/setup-release` and `/wiggum` to persist codebase index). Use the project's absolute path:
+
+```
+"Edit(file_path:$PROJECT_ROOT/.claude/project-state.md)",
+"Edit(file_path:$PROJECT_ROOT/.claude/state/*)",
+"Write(file_path:$PROJECT_ROOT/.claude/project-state.md)",
+"Write(file_path:$PROJECT_ROOT/.claude/state/*)"
+```
+
+Without these, the indexer agent cannot write its findings and downstream agents (Planner, Builder) must re-explore the codebase from scratch each session.
+
 ### 3.4 Create Project-Specific Commands
 
 Based on the detected primary abstraction:
