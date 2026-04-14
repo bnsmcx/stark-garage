@@ -209,7 +209,17 @@ git checkout release/RELEASE_NAME && git pull
 
 Update release PR checklist: replace `- [ ] #NN` with `- [x] #NN`.
 
-### 13. Loop
+### 13. Context Refresh
+
+Before looping, re-read authoritative instructions to prevent drift during long sessions:
+
+1. **Re-read CLAUDE.md** — reload all project rules, validation commands, and architecture constraints
+2. **Re-read command definitions** — re-read this file (`/wiggum`), `/close-issue`, `/review-pr`, and any other commands invoked during the loop
+3. **Re-read reference docs** — reload any `agent_docs/` files referenced by CLAUDE.md that are relevant to the next iteration
+
+Do NOT compact — working context from related issues (discoveries, ruled-out approaches, deferred decisions) is valuable across iterations. Trust automatic context management to handle window pressure; this step only ensures mandated rules stay fresh.
+
+### 14. Loop
 
 Log completion summary. Check milestone progress. Select next issue. Continue.
 
