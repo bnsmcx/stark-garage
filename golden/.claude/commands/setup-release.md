@@ -134,7 +134,18 @@ git push -u origin release/v1.0
 
 Tell the user: "Release branch `release/v1.0` created from `main`."
 
-### 10. Create draft release PR
+### 10. Bump version strings
+
+Update the project's version string and commit as the first change on the release branch:
+
+1. Find the version-constant location. Check CLAUDE.md and `agent_docs/project-structure.md` first — many projects centralize the version in a single file (e.g., `internal/api/version.go`, `src/version.ts`, `package.json`). Grep the repo for the previous version string as a fallback.
+2. Replace every occurrence with the new release version.
+3. Commit: `chore: bump version to vX.Y.Z`
+4. Push to the release branch.
+
+This must happen before any feature work begins on the branch — every subsequent commit on the branch then has access to the new version string for UI, logging, telemetry, and cache-busting.
+
+### 11. Create draft release PR
 
 Create a draft PR from the release branch to `main`:
 
@@ -176,7 +187,7 @@ Release: `release/v1.0`
 
 Note the PR number returned — report it in the summary.
 
-### 11. Summary
+### 12. Summary
 
 ```
 ## Release Setup Complete

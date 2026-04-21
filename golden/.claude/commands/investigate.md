@@ -22,7 +22,7 @@ The argument is a **feature request** — free-form text, an issue number, or no
 
 - **Read-only.** Do not edit any project files. Research only.
 - **Use subagents** for parallel codebase exploration (Explore agents) to keep the main context lean.
-- **Probe the local API** (port 80) freely — GET requests, dev tokens, schema inspection.
+- **Probe the local API** freely — GET requests, dev tokens, schema inspection. If the app isn't running, **launch it** (see Step 1) rather than skipping live probing.
 - **Iterate with the user.** Present findings, ask clarifying questions, refine understanding. Do not rush to a plan.
 - **Output a plan, not code.** The deliverable is a shared understanding + a plan outline ready for `/create-issues`.
 
@@ -38,16 +38,31 @@ If nothing was provided, ask: "What feature would you like me to investigate?"
 
 Restate the feature request in 1-2 sentences and confirm understanding with the user before proceeding.
 
-## Step 1. Obtain API Access
+## Step 1. Ensure the App Is Running, Then Obtain API Access
 
-Get a dev token for local API exploration:
+Live API probing is a hard requirement — do not skip to static analysis just because the server isn't up. Boot it yourself.
+
+### 1a. Detect running instance
+
+Probe the project's known health endpoint(s). The base URL and the run command live in `agent_docs/build-and-test.md` (or CLAUDE.md's project-specific section). Record the base URL if reachable.
+
+### 1b. Launch the app if it isn't running
+
+Start the server as a **background** Bash process (`run_in_background: true`) so the rest of the investigation can proceed. Use the project's primary run command (see `agent_docs/build-and-test.md`). Redirect logs to a tempfile so you can grep them later if an endpoint misbehaves.
+
+Wait for the health endpoint to return `200` with a sensible timeout (startup is usually <10s, but cold caches or local DBs can push it further). If it never comes up, surface the error, tail the log, and ask whether to continue with static analysis or fix the boot issue.
+
+**Important:** you started this process — **stop it when the investigation ends** (Step 7). Leaving it running wastes resources and can collide with the user's own dev server. Use the specific binary name or port from the project's run command; generic `pkill -f "go run"` or `pkill node` often misses the actual listening process.
+
+### 1c. Dev token (if needed)
+
+If the project exposes a dev-token endpoint (check the route list or existing docs), fetch one:
 
 ```bash
-# Discover available dev token routes
-curl -s http://localhost/api/dev/token | jq .
+curl -s "$BASE/api/dev/token" | jq . 2>/dev/null || echo "no dev token endpoint"
 ```
 
-Store the token for use in subsequent API calls. If dev tokens are unavailable or the API is not running, note this and proceed with static analysis only.
+Store the token for subsequent calls. Absence of a dev token is fine — many endpoints are unauthenticated on localhost.
 
 ## Step 2. Codebase Reconnaissance
 
@@ -61,10 +76,10 @@ Launch **parallel Explore subagents** to investigate the areas of the codebase m
 
 Tailor the subagent tasks to the specific feature — don't explore irrelevant areas.
 
-Also inspect the Swagger docs:
+Also inspect the Swagger docs (if the project exposes them):
 ```bash
-curl -s http://localhost/swagger/doc.json | jq '.paths | keys' # list all endpoints
-curl -s http://localhost/swagger/doc.json | jq '.definitions | keys' # list all models
+curl -s "$BASE/swagger/doc.json" | jq '.paths | keys'       # list all endpoints
+curl -s "$BASE/swagger/doc.json" | jq '.definitions | keys' # list all models
 ```
 
 ## Step 3. Probe Current Behavior
@@ -154,13 +169,14 @@ Once aligned, present a plan outline structured for `/create-issues`:
 
 Ask: "Does this plan look right? I can adjust scope, ordering, or details before we run `/create-issues`."
 
-## Step 7. Handoff to /create-issues
+## Step 7. Handoff to /create-issues (and clean up)
 
 Once the user approves the plan:
 
 1. Confirm the plan is in conversation context (it should be from Step 6)
 2. Ask if there's an assignee preference
 3. Instruct the user to run `/create-issues` (or offer to invoke it)
+4. **If you launched the app in Step 1b**, stop it now. Use the specific binary name or port from the project's run command. Confirm it's down with a final health-check (should return a connection-refused or non-200). Leave any server the user started themselves alone.
 
 The plan outline from Step 6 is designed to be directly consumable by `/create-issues`.
 
@@ -169,9 +185,9 @@ The plan outline from Step 6 is designed to be directly consumable by `/create-i
 - **NEVER edit project files** — this is a research-only command
 - **NEVER skip user confirmation** — always iterate, never assume alignment
 - **ALWAYS use subagents** for broad codebase exploration to keep context clean
-- **ALWAYS probe the live API** when it's available — don't rely solely on reading code
+- **ALWAYS probe the live API** — if it isn't running, launch it per Step 1b rather than falling back to static-only analysis
 - **ALWAYS present open questions** — surface ambiguity rather than guessing
 - **ALWAYS structure findings** — use tables and headers, not walls of text
 - One feature request per invocation — if the user has multiple, run `/investigate` for each
-- If the API is not running locally, note it and proceed with static analysis
+- If you launched the server, shut it down in Step 7 (don't orphan it)
 - Keep API calls read-only (GET requests, no mutations)
