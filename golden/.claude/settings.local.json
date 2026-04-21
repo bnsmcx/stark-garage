@@ -6,7 +6,9 @@
       "Bash(toolbox-memory:*)",
       "Bash(agent-browser:*)",
       "Bash(npx @playwright/mcp:*)",
-      "Bash(npx chrome-devtools-mcp:*)"
+      "Bash(npx chrome-devtools-mcp:*)",
+      "Write(.claude/**)",
+      "Edit(.claude/**)"
     ]
   }
 }

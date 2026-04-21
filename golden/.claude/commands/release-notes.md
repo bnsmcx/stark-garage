@@ -43,7 +43,28 @@ Group closed issues by type (from title prefix):
 
 Separate implementation issues from tracking epics.
 
-### 3. Generate "What's New" Narrative
+### 3. Generate Release Title & Motivation
+
+Open the description with one paragraph answering:
+- **What triggered this release** — performance regression, user request, compliance requirement, tech-debt paydown, etc.
+- **What it achieves** — the user-visible outcome (not the implementation)
+- **Why now** — timing or constraint that made this release the right moment
+
+This is the first thing a reviewer reads — make it count. Three or four sentences, concrete, no marketing prose.
+
+### 4. Build Baseline → Target Metrics Table (if applicable)
+
+For performance, quality, or measurable-outcome releases, include a before/after table immediately after the motivation paragraph:
+
+| Metric | Baseline | Target | Actual |
+|--------|----------|--------|--------|
+| [e.g., Lighthouse Performance] | 67 | 85+ | 92 |
+| [e.g., Bundle size (gzip)] | 180 KB | ≤150 KB | 142 KB |
+| [e.g., p95 cold-cache latency] | 820 ms | <500 ms | 410 ms |
+
+Skip this section entirely if the release has no measurable baseline to compare against (pure refactors, documentation releases, etc.).
+
+### 5. Generate "What's New" Narrative
 
 For each feature group (not individual issues), write a paragraph explaining:
 - What changed from the user's perspective
@@ -57,7 +78,7 @@ Include a separate paragraph for:
 - Security fixes (dependency upgrades, vulnerability patches)
 - Breaking changes (if any — call these out prominently)
 
-### 4. Build API Changes Table
+### 7. Build API Changes Table
 
 If the release touches HTTP endpoints, generate:
 
@@ -74,7 +95,7 @@ If the release touches HTTP endpoints, generate:
 
 Extract endpoint info from issue bodies (implementation notes), swagger diff, or handler file changes.
 
-### 5. Build Database Changes Table
+### 8. Build Database Changes Table
 
 If the release touches schema or models:
 
@@ -84,7 +105,7 @@ If the release touches schema or models:
 
 Include dependency upgrades here too.
 
-### 6. Build Implementation Progress
+### 9. Build Implementation Progress
 
 Generate a collapsed `<details>` section with phased implementation progress:
 
@@ -103,7 +124,7 @@ Generate a collapsed `<details>` section with phased implementation progress:
 
 Include tracking epics at the bottom.
 
-### 7. Assemble PR Description
+### 10. Assemble PR Description
 
 Combine all sections into the final PR body:
 
@@ -113,6 +134,14 @@ Combine all sections into the final PR body:
 > **Note:** [Any prerequisite instructions, e.g., DB rebuild required]
 
 **N issues, M epics, K PRs** -- [one-line summary of themes]
+
+### Motivation
+
+[Three-four-sentence release-title-and-motivation paragraph from Step 3]
+
+### Baseline → Target
+
+[Metrics table from Step 4, if applicable]
 
 ### What's New
 
@@ -146,7 +175,7 @@ Combine all sections into the final PR body:
 - #NN -- title
 ```
 
-### 8. Apply to PR
+### 11. Apply to PR
 
 Update the release PR description:
 ```bash
