@@ -116,8 +116,8 @@ func (d *DB) Prune(maxActive int) (int, error) {
 }
 
 // Promote marks a memory entry as promoted and records where it was promoted to.
-// The value is updated to include the promotion target and the lifecycle is set
-// to 'promoted'. The entry's confidence is set to 1.0.
+// The promoted_to column is set; the value column is left untouched. The
+// lifecycle is set to 'promoted' and the entry's confidence is set to 1.0.
 func (d *DB) Promote(namespace, key, promotedTo string) error {
 	now := time.Now().UTC().Format(time.RFC3339)
 
@@ -126,7 +126,7 @@ func (d *DB) Promote(namespace, key, promotedTo string) error {
 		 SET lifecycle = 'promoted',
 		     confidence = 1.0,
 		     updated_at = ?,
-		     value = value || ' [promoted to: ' || ? || ']'
+		     promoted_to = ?
 		 WHERE namespace = ? AND key = ?`,
 		now, promotedTo, namespace, key,
 	)

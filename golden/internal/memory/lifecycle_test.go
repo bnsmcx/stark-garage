@@ -1,6 +1,7 @@
 package memory
 
 import (
+	"database/sql"
 	"fmt"
 	"testing"
 	"time"
@@ -178,12 +179,12 @@ func TestPromote(t *testing.T) {
 		t.Fatalf("Promote: %v", err)
 	}
 
-	var lifecycle string
+	var lifecycle, value string
 	var confidence float64
-	var value string
+	var promotedTo sql.NullString
 	db.sql.QueryRow(
-		`SELECT lifecycle, confidence, value FROM memories WHERE key = 'promote-me'`,
-	).Scan(&lifecycle, &confidence, &value)
+		`SELECT lifecycle, confidence, value, promoted_to FROM memories WHERE key = 'promote-me'`,
+	).Scan(&lifecycle, &confidence, &value, &promotedTo)
 
 	if lifecycle != LifecyclePromoted {
 		t.Errorf("lifecycle = %q, want %q", lifecycle, LifecyclePromoted)
@@ -191,8 +192,37 @@ func TestPromote(t *testing.T) {
 	if confidence != 1.0 {
 		t.Errorf("confidence = %f, want 1.0", confidence)
 	}
-	if value == "original value" {
-		t.Error("value not updated with promotion target")
+	if value != "original value" {
+		t.Errorf("value mutated: got %q, want %q", value, "original value")
+	}
+	if !promotedTo.Valid || promotedTo.String != "CLAUDE.md Development Philosophy" {
+		t.Errorf("promoted_to = %v, want \"CLAUDE.md Development Philosophy\"", promotedTo)
+	}
+}
+
+func TestPromotePreservesValue(t *testing.T) {
+	db := mustOpenInMemory(t)
+	defer db.Close()
+
+	original := `{"rule":"do X","why":"because Y"}`
+	db.Store("bug_pattern", "debugger", "json-entry", original)
+
+	if err := db.Promote("bug_pattern", "json-entry", "CLAUDE.md"); err != nil {
+		t.Fatalf("Promote: %v", err)
+	}
+
+	entry, err := db.Peek("bug_pattern", "json-entry")
+	if err != nil {
+		t.Fatalf("Peek: %v", err)
+	}
+	if entry.Value != original {
+		t.Errorf("value mutated by Promote:\n  got:  %q\n  want: %q", entry.Value, original)
+	}
+	if entry.PromotedTo == nil || *entry.PromotedTo != "CLAUDE.md" {
+		t.Errorf("PromotedTo = %v, want &\"CLAUDE.md\"", entry.PromotedTo)
+	}
+	if entry.Lifecycle != LifecyclePromoted {
+		t.Errorf("lifecycle = %q, want %q", entry.Lifecycle, LifecyclePromoted)
 	}
 }
 

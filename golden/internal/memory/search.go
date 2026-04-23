@@ -39,7 +39,7 @@ func (d *DB) Search(namespace, query string, limit int, raw bool) ([]MemoryEntry
 	rows, err := d.sql.Query(
 		`SELECT m.id, m.namespace, m.agent, m.key, m.value,
 		        m.confidence, m.hit_count,
-		        m.created_at, m.updated_at, m.expires_at, m.lifecycle
+		        m.created_at, m.updated_at, m.expires_at, m.lifecycle, m.promoted_to
 		 FROM memories_fts
 		 JOIN memories m ON m.id = memories_fts.rowid
 		 WHERE memories_fts MATCH ?
