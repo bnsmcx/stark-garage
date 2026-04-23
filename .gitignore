@@ -1,1 +1,10 @@
 golden/toolbox-memory
+
+# Claude Code config — local/personal, not checked in
+# (The canonical source lives in golden/. These top-level files are the
+# dogfooded deployment for working on the golden set itself.)
+CLAUDE.md
+BUDGETS.md
+.mcp.json
+.claude/
+agent_docs/
