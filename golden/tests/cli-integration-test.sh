@@ -91,6 +91,17 @@ else
   FAIL=$((FAIL + 1))
 fi
 
+# --- FTS hyphen-safe search (#6) ---
+"$BINARY" write --db "$DB" --ns bug_pattern --agent debugger --key "hyphen-test" --value "this value has alt-screen and logger tokens" >/dev/null
+check_output "hyphen-safe search" "hyphen-test" \
+  "$BINARY" search --db "$DB" --ns bug_pattern --query "alt-screen logger"
+
+check_output "--raw passes through" "hyphen-test" \
+  "$BINARY" search --db "$DB" --ns bug_pattern --query "logger" --raw
+
+# Clean up so it doesn't skew downstream counts.
+"$BINARY" delete --db "$DB" --ns bug_pattern --key "hyphen-test" >/dev/null
+
 # --- peek (side-effect-free) ---
 check_output "peek returns entry" '"key": "test-pattern-1"' \
   "$BINARY" peek --db "$DB" --ns calibration --key "test-pattern-1"
