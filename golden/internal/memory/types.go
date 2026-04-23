@@ -16,6 +16,7 @@ type MemoryEntry struct {
 	UpdatedAt  time.Time  `json:"updatedAt"`
 	ExpiresAt  *time.Time `json:"expiresAt,omitempty"`
 	Lifecycle  string     `json:"lifecycle"`
+	PromotedTo *string    `json:"promotedTo,omitempty"`
 }
 
 // LifecycleStats holds counts per lifecycle state.

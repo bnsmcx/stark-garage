@@ -178,6 +178,27 @@ check_output "promote returns ok" '"status": "promoted"' \
 check_output "stats shows promoted" '"promoted": 1' \
   "$BINARY" stats --db "$DB"
 
+# #7: promote must not mutate the value column
+"$BINARY" write --db "$DB" --ns bug_pattern --agent debugger --key "json-promote" --value '{"rule":"x","why":"y"}' >/dev/null
+"$BINARY" promote --db "$DB" --ns bug_pattern --key "json-promote" --to "CLAUDE.md" >/dev/null
+OUTPUT=$("$BINARY" peek --db "$DB" --ns bug_pattern --key "json-promote" 2>&1)
+if echo "$OUTPUT" | grep -q '"value": "{\\"rule\\":\\"x\\",\\"why\\":\\"y\\"}"'; then
+  echo "  PASS  promote preserves JSON value byte-for-byte"
+  PASS=$((PASS + 1))
+else
+  echo "  FAIL  promote preserves JSON value byte-for-byte"
+  echo "        got: $(echo "$OUTPUT" | grep value)"
+  FAIL=$((FAIL + 1))
+fi
+if echo "$OUTPUT" | grep -q '"promotedTo": "CLAUDE.md"'; then
+  echo "  PASS  promote writes promotedTo column"
+  PASS=$((PASS + 1))
+else
+  echo "  FAIL  promote writes promotedTo column"
+  echo "        got: $(echo "$OUTPUT" | grep promoted)"
+  FAIL=$((FAIL + 1))
+fi
+
 # Verify promoted entry excluded from list
 OUTPUT=$("$BINARY" list --db "$DB" --ns calibration 2>&1)
 if echo "$OUTPUT" | grep -q "test-pattern-1"; then

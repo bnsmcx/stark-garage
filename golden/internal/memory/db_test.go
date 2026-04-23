@@ -1,6 +1,9 @@
 package memory
 
-import "testing"
+import (
+	"database/sql"
+	"testing"
+)
 
 func TestOpenInMemory(t *testing.T) {
 	db, err := openInMemory()
@@ -30,6 +33,89 @@ func TestMigrateIdempotent(t *testing.T) {
 		t.Fatalf("third migrate failed: %v", err)
 	}
 	db.Close()
+}
+
+func TestPromoteBackfill(t *testing.T) {
+	db, err := openInMemory()
+	if err != nil {
+		t.Fatalf("openInMemory: %v", err)
+	}
+	defer db.Close()
+
+	// Seed a row with the old corrupted shape: value ends with
+	// " [promoted to: X]" and promoted_to IS NULL.
+	_, err = db.sql.Exec(
+		`INSERT INTO memories
+		   (namespace, agent, key, value, confidence, hit_count,
+		    created_at, updated_at, lifecycle, promoted_to)
+		 VALUES
+		   ('bug_pattern', 'debugger', 'legacy', 'x [promoted to: CLAUDE.md]',
+		    1.0, 5, '2024-01-01T00:00:00Z', '2024-01-01T00:00:00Z',
+		    'promoted', NULL)`,
+	)
+	if err != nil {
+		t.Fatalf("seed legacy row: %v", err)
+	}
+
+	// Re-run migrate — backfill should split the suffix into promoted_to.
+	if err := db.migrate(); err != nil {
+		t.Fatalf("migrate: %v", err)
+	}
+
+	var value string
+	var promotedTo sql.NullString
+	err = db.sql.QueryRow(
+		`SELECT value, promoted_to FROM memories WHERE key = 'legacy'`,
+	).Scan(&value, &promotedTo)
+	if err != nil {
+		t.Fatalf("read back: %v", err)
+	}
+	if value != "x" {
+		t.Errorf("backfill left value = %q, want %q", value, "x")
+	}
+	if !promotedTo.Valid || promotedTo.String != "CLAUDE.md" {
+		t.Errorf("backfill set promoted_to = %v, want \"CLAUDE.md\"", promotedTo)
+	}
+}
+
+func TestPromoteBackfillIdempotent(t *testing.T) {
+	db, err := openInMemory()
+	if err != nil {
+		t.Fatalf("openInMemory: %v", err)
+	}
+	defer db.Close()
+
+	// Seed a properly promoted row (not the old shape).
+	_, err = db.sql.Exec(
+		`INSERT INTO memories
+		   (namespace, agent, key, value, confidence, hit_count,
+		    created_at, updated_at, lifecycle, promoted_to)
+		 VALUES
+		   ('bug_pattern', 'debugger', 'ok', '{"a":"b"}',
+		    1.0, 0, '2024-01-01T00:00:00Z', '2024-01-01T00:00:00Z',
+		    'promoted', 'CLAUDE.md')`,
+	)
+	if err != nil {
+		t.Fatalf("seed clean row: %v", err)
+	}
+
+	// Re-run migrate multiple times — must not touch clean rows.
+	for range 3 {
+		if err := db.migrate(); err != nil {
+			t.Fatalf("migrate: %v", err)
+		}
+	}
+
+	var value, promotedTo string
+	db.sql.QueryRow(
+		`SELECT value, promoted_to FROM memories WHERE key = 'ok'`,
+	).Scan(&value, &promotedTo)
+	if value != `{"a":"b"}` {
+		t.Errorf("clean row value mutated: %q", value)
+	}
+	if promotedTo != "CLAUDE.md" {
+		t.Errorf("clean row promoted_to changed: %q", promotedTo)
+	}
 }
 
 func TestOpenFilePath(t *testing.T) {

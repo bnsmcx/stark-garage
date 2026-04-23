@@ -49,7 +49,7 @@ func (d *DB) Store(namespace, agent, key, value string) (int64, error) {
 func (d *DB) Get(namespace, key string) (*MemoryEntry, error) {
 	row := d.sql.QueryRow(
 		`SELECT id, namespace, agent, key, value, confidence, hit_count,
-		        created_at, updated_at, expires_at, lifecycle
+		        created_at, updated_at, expires_at, lifecycle, promoted_to
 		 FROM memories
 		 WHERE namespace = ? AND key = ?`,
 		namespace, key,
@@ -84,7 +84,7 @@ func (d *DB) Get(namespace, key string) (*MemoryEntry, error) {
 func (d *DB) Peek(namespace, key string) (*MemoryEntry, error) {
 	row := d.sql.QueryRow(
 		`SELECT id, namespace, agent, key, value, confidence, hit_count,
-		        created_at, updated_at, expires_at, lifecycle
+		        created_at, updated_at, expires_at, lifecycle, promoted_to
 		 FROM memories
 		 WHERE namespace = ? AND key = ?`,
 		namespace, key,
@@ -106,7 +106,7 @@ func (d *DB) Peek(namespace, key string) (*MemoryEntry, error) {
 func (d *DB) List(namespace string) ([]MemoryEntry, error) {
 	rows, err := d.sql.Query(
 		`SELECT id, namespace, agent, key, value, confidence, hit_count,
-		        created_at, updated_at, expires_at, lifecycle
+		        created_at, updated_at, expires_at, lifecycle, promoted_to
 		 FROM memories
 		 WHERE namespace = ?
 		   AND lifecycle IN ('active', 'validated')
@@ -146,12 +146,12 @@ func (d *DB) Delete(namespace, key string) error {
 func scanEntry(row *sql.Row) (*MemoryEntry, error) {
 	var e MemoryEntry
 	var createdAt, updatedAt string
-	var expiresAt sql.NullString
+	var expiresAt, promotedTo sql.NullString
 
 	err := row.Scan(
 		&e.ID, &e.Namespace, &e.Agent, &e.Key, &e.Value,
 		&e.Confidence, &e.HitCount,
-		&createdAt, &updatedAt, &expiresAt, &e.Lifecycle,
+		&createdAt, &updatedAt, &expiresAt, &e.Lifecycle, &promotedTo,
 	)
 	if err != nil {
 		return nil, err
@@ -159,6 +159,10 @@ func scanEntry(row *sql.Row) (*MemoryEntry, error) {
 
 	if err := parseEntryTimes(&e, createdAt, updatedAt, expiresAt); err != nil {
 		return nil, err
+	}
+	if promotedTo.Valid {
+		s := promotedTo.String
+		e.PromotedTo = &s
 	}
 	return &e, nil
 }
@@ -167,12 +171,12 @@ func scanEntry(row *sql.Row) (*MemoryEntry, error) {
 func scanEntryFromRows(rows *sql.Rows) (*MemoryEntry, error) {
 	var e MemoryEntry
 	var createdAt, updatedAt string
-	var expiresAt sql.NullString
+	var expiresAt, promotedTo sql.NullString
 
 	err := rows.Scan(
 		&e.ID, &e.Namespace, &e.Agent, &e.Key, &e.Value,
 		&e.Confidence, &e.HitCount,
-		&createdAt, &updatedAt, &expiresAt, &e.Lifecycle,
+		&createdAt, &updatedAt, &expiresAt, &e.Lifecycle, &promotedTo,
 	)
 	if err != nil {
 		return nil, err
@@ -180,6 +184,10 @@ func scanEntryFromRows(rows *sql.Rows) (*MemoryEntry, error) {
 
 	if err := parseEntryTimes(&e, createdAt, updatedAt, expiresAt); err != nil {
 		return nil, err
+	}
+	if promotedTo.Valid {
+		s := promotedTo.String
+		e.PromotedTo = &s
 	}
 	return &e, nil
 }
