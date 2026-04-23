@@ -188,6 +188,7 @@ func cmdSearch(args []string) {
 	ns := fs.String("ns", "", "namespace (required)")
 	query := fs.String("query", "", "search query (required)")
 	limitStr := fs.String("limit", "10", "max results")
+	raw := fs.Bool("raw", false, "pass query to FTS5 unchanged (bypass hyphen-safe sanitization)")
 	fs.Parse(args)
 
 	if *ns == "" || *query == "" {
@@ -205,7 +206,7 @@ func cmdSearch(args []string) {
 	}
 	defer db.Close()
 
-	entries, err := db.Search(*ns, *query, limit)
+	entries, err := db.Search(*ns, *query, limit, *raw)
 	if err != nil {
 		fatal("search failed: %v", err)
 	}
