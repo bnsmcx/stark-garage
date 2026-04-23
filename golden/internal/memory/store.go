@@ -77,6 +77,29 @@ func (d *DB) Get(namespace, key string) (*MemoryEntry, error) {
 	return entry, nil
 }
 
+// Peek retrieves a single memory entry by namespace and key WITHOUT any side
+// effects: hit_count, updated_at, and confidence are untouched. Use this for
+// browsing or auditing; use Get for "I am consuming this entry" semantics.
+// Returns nil, ErrNotFound if no entry exists.
+func (d *DB) Peek(namespace, key string) (*MemoryEntry, error) {
+	row := d.sql.QueryRow(
+		`SELECT id, namespace, agent, key, value, confidence, hit_count,
+		        created_at, updated_at, expires_at, lifecycle
+		 FROM memories
+		 WHERE namespace = ? AND key = ?`,
+		namespace, key,
+	)
+
+	entry, err := scanEntry(row)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrNotFound
+		}
+		return nil, fmt.Errorf("peek failed: %w", err)
+	}
+	return entry, nil
+}
+
 // List returns all memory entries for the given namespace where lifecycle
 // is 'active' or 'validated', ordered by hit_count DESC, updated_at DESC.
 // Returns an empty non-nil slice if none exist.
