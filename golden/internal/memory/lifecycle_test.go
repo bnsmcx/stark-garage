@@ -32,6 +32,67 @@ func TestPruneActiveToStale(t *testing.T) {
 	}
 }
 
+func TestPruneActiveToValidated(t *testing.T) {
+	db := mustOpenInMemory(t)
+	defer db.Close()
+
+	db.Store("bug_pattern", "debugger", "recurring-bug", "content")
+	// Two hits is enough to validate.
+	db.sql.Exec(`UPDATE memories SET hit_count = 2 WHERE key = 'recurring-bug'`)
+
+	n, err := db.Prune(200)
+	if err != nil {
+		t.Fatalf("Prune: %v", err)
+	}
+	if n < 1 {
+		t.Errorf("Prune returned %d transitions, want >= 1", n)
+	}
+
+	var lifecycle string
+	db.sql.QueryRow(`SELECT lifecycle FROM memories WHERE key = 'recurring-bug'`).Scan(&lifecycle)
+	if lifecycle != LifecycleValidated {
+		t.Errorf("lifecycle = %q, want %q", lifecycle, LifecycleValidated)
+	}
+}
+
+func TestPruneValidatedStaysValidated(t *testing.T) {
+	db := mustOpenInMemory(t)
+	defer db.Close()
+
+	db.Store("bug_pattern", "debugger", "already-validated", "content")
+	db.sql.Exec(`UPDATE memories SET lifecycle = 'validated', hit_count = 5 WHERE key = 'already-validated'`)
+
+	_, err := db.Prune(200)
+	if err != nil {
+		t.Fatalf("Prune: %v", err)
+	}
+
+	var lifecycle string
+	db.sql.QueryRow(`SELECT lifecycle FROM memories WHERE key = 'already-validated'`).Scan(&lifecycle)
+	if lifecycle != LifecycleValidated {
+		t.Errorf("lifecycle = %q, want %q (validated should stay validated)", lifecycle, LifecycleValidated)
+	}
+}
+
+func TestPruneActiveHitCountZeroNotValidated(t *testing.T) {
+	db := mustOpenInMemory(t)
+	defer db.Close()
+
+	db.Store("lesson", "pomo", "fresh-entry", "content")
+	// hit_count stays 0 — entry is fresh, should remain active, not validated
+
+	_, err := db.Prune(200)
+	if err != nil {
+		t.Fatalf("Prune: %v", err)
+	}
+
+	var lifecycle string
+	db.sql.QueryRow(`SELECT lifecycle FROM memories WHERE key = 'fresh-entry'`).Scan(&lifecycle)
+	if lifecycle != LifecycleActive {
+		t.Errorf("lifecycle = %q, want %q (hit_count=0 should stay active)", lifecycle, LifecycleActive)
+	}
+}
+
 func TestPruneStaleToArchived(t *testing.T) {
 	db := mustOpenInMemory(t)
 	defer db.Close()
@@ -57,25 +118,25 @@ func TestPruneStaleToArchived(t *testing.T) {
 	}
 }
 
-func TestPruneDoesNotTouchActiveWithHits(t *testing.T) {
+func TestPruneActiveWithHitsGoesToValidatedNotStale(t *testing.T) {
 	db := mustOpenInMemory(t)
 	defer db.Close()
 
 	db.Store("lesson", "pomo", "active-with-hits", "useful content")
 
-	// Backdate but give it hits
+	// Backdate past the stale cutoff, but give it hits so it qualifies for validated.
 	old := time.Now().UTC().Add(-90 * 24 * time.Hour).Format(time.RFC3339)
 	db.sql.Exec(`UPDATE memories SET updated_at = ?, hit_count = 5 WHERE key = 'active-with-hits'`, old)
 
-	n, _ := db.Prune(200)
-	if n != 0 {
-		t.Errorf("Prune transitioned %d entries, want 0 (entry has hits)", n)
+	_, err := db.Prune(200)
+	if err != nil {
+		t.Fatalf("Prune: %v", err)
 	}
 
 	var lifecycle string
 	db.sql.QueryRow(`SELECT lifecycle FROM memories WHERE key = 'active-with-hits'`).Scan(&lifecycle)
-	if lifecycle != LifecycleActive {
-		t.Errorf("lifecycle = %q, want %q (should not transition)", lifecycle, LifecycleActive)
+	if lifecycle != LifecycleValidated {
+		t.Errorf("lifecycle = %q, want %q (hits should route to validated, not stale)", lifecycle, LifecycleValidated)
 	}
 }
 

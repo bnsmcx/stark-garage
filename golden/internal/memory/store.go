@@ -63,13 +63,13 @@ func (d *DB) Get(namespace, key string) (*MemoryEntry, error) {
 		return nil, fmt.Errorf("get failed: %w", err)
 	}
 
-	// Increment hit_count and bump confidence slightly (capped at 1.0).
+	// Increment hit_count and updated_at. Confidence is intentionally not
+	// mutated on read — it's set at write (0.5) and promote (1.0) only.
 	now := time.Now().UTC().Format(time.RFC3339)
 	_, _ = d.sql.Exec(
 		`UPDATE memories
 		 SET hit_count = hit_count + 1,
-		     updated_at = ?,
-		     confidence = MIN(1.0, confidence + 0.05)
+		     updated_at = ?
 		 WHERE id = ?`,
 		now, entry.ID,
 	)
@@ -78,7 +78,7 @@ func (d *DB) Get(namespace, key string) (*MemoryEntry, error) {
 }
 
 // List returns all memory entries for the given namespace where lifecycle
-// is 'active' or 'validated', ordered by confidence DESC, hit_count DESC.
+// is 'active' or 'validated', ordered by hit_count DESC, updated_at DESC.
 // Returns an empty non-nil slice if none exist.
 func (d *DB) List(namespace string) ([]MemoryEntry, error) {
 	rows, err := d.sql.Query(
@@ -87,7 +87,7 @@ func (d *DB) List(namespace string) ([]MemoryEntry, error) {
 		 FROM memories
 		 WHERE namespace = ?
 		   AND lifecycle IN ('active', 'validated')
-		 ORDER BY confidence DESC, hit_count DESC`,
+		 ORDER BY hit_count DESC, updated_at DESC`,
 		namespace,
 	)
 	if err != nil {

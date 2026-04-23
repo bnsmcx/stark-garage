@@ -75,6 +75,26 @@ func TestSearchIncrementsHitCount(t *testing.T) {
 	}
 }
 
+func TestSearchDoesNotBumpConfidence(t *testing.T) {
+	db := mustOpenInMemory(t)
+	defer db.Close()
+
+	db.Store("bug_pattern", "debugger", "nil-bug", "nil pointer in reset handler")
+
+	// Initial confidence is 0.5. Multiple searches must not inflate it.
+	db.Search("bug_pattern", "nil pointer", 10)
+	db.Search("bug_pattern", "nil pointer", 10)
+	db.Search("bug_pattern", "nil pointer", 10)
+
+	entries, _ := db.List("bug_pattern")
+	if len(entries) != 1 {
+		t.Fatalf("expected 1 entry, got %d", len(entries))
+	}
+	if entries[0].Confidence != 0.5 {
+		t.Errorf("confidence = %f after 3 Searches, want 0.5 (no auto-bump)", entries[0].Confidence)
+	}
+}
+
 func TestSearchEmptyQuery(t *testing.T) {
 	db := mustOpenInMemory(t)
 	defer db.Close()
