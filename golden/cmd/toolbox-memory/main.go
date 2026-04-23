@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"strconv"
+	"strings"
 
 	"toolbox-memory/internal/memory"
 )
@@ -15,7 +16,7 @@ const version = "0.1.0"
 
 func main() {
 	if len(os.Args) < 2 {
-		printUsage()
+		printUsage(os.Stderr)
 		os.Exit(1)
 	}
 
@@ -50,16 +51,20 @@ func main() {
 	case "version":
 		fmt.Println(version)
 	case "help", "--help", "-h":
-		printUsage()
+		if len(os.Args) >= 3 {
+			printHelpTopic(os.Args[2])
+		} else {
+			printUsage(os.Stdout)
+		}
 	default:
 		fmt.Fprintf(os.Stderr, "unknown command: %s\n\n", subcmd)
-		printUsage()
+		printUsage(os.Stderr)
 		os.Exit(1)
 	}
 }
 
-func printUsage() {
-	fmt.Fprintln(os.Stderr, `Usage: toolbox-memory <command> [flags]
+func printUsage(w io.Writer) {
+	fmt.Fprintln(w, `Usage: toolbox-memory <command> [flags]
 
 Commands:
   init      Create the database file
@@ -76,8 +81,148 @@ Commands:
   version   Print version
 
 Global flag (all commands except version):
-  --db PATH   Override database path (default: .claude/memory/toolbox.db)`)
+  --db PATH   Override database path (default: .claude/memory/toolbox.db)
+
+Run 'toolbox-memory help <topic>' for conceptual topics.`)
+	fmt.Fprintf(w, "Available topics: %s\n", strings.Join(helpTopics, ", "))
 }
+
+var helpTopics = []string{"lifecycle", "agent", "namespaces", "upsert", "examples"}
+
+func printHelpTopic(topic string) {
+	switch topic {
+	case "lifecycle":
+		fmt.Println(helpLifecycle)
+	case "agent":
+		fmt.Println(helpAgent)
+	case "namespaces":
+		fmt.Println(helpNamespaces)
+	case "upsert":
+		fmt.Println(helpUpsert)
+	case "examples":
+		fmt.Println(helpExamples)
+	default:
+		fmt.Fprintf(os.Stderr, "unknown help topic: %q\n\nAvailable topics: %s\n",
+			topic, strings.Join(helpTopics, ", "))
+		os.Exit(1)
+	}
+}
+
+const helpLifecycle = `Lifecycle
+
+Every entry moves through these states:
+
+  active     — freshly written; hit_count = 0; confidence = 0.5
+  validated  — proven by recurrence: active entries with hit_count >= 2
+               transition here on the next 'prune' run
+  promoted   — explicitly marked important via 'promote'; confidence = 1.0;
+               the promoted_to column records the target (e.g. CLAUDE.md section)
+  stale      — active with no hits in 60+ days; transitioned by 'prune'
+  archived   — stale for 30+ more days; transitioned by 'prune'
+
+Which states 'list' and 'search' return: active and validated only.
+Which states 'stats' counts: all five, plus a total.
+When to run 'prune': on /slim and /pomo invocations, or whenever stats shows
+growth in the active bucket. It's idempotent and cheap for typical DBs.
+
+Confidence is NOT mutated on read — it's 0.5 on write and 1.0 on promote.
+Past versions auto-bumped confidence on every read/search; that behavior
+was removed.`
+
+const helpAgent = `Agent field
+
+The 'agent' column is audit metadata: which agent emitted this entry.
+It is NOT an access-control dimension and NOT a search filter — every
+subcommand ignores it when matching (ns, key). The idiomatic values used
+by the golden set agents:
+
+  debugger   — writes bug_pattern
+  planner    — writes spec_gap, calibration
+  reviewer   — writes spec_gap
+  builder    — writes calibration
+  close-issue, pomo — audit tagging only
+
+Upsert overwrite: 'write --ns X --key Y --agent Z' on an existing (X, Y)
+silently overwrites the agent column with Z, along with the value. This is
+intentional (the newest writer is authoritative for audit), but worth
+knowing — if two agents are writing to the same key, the order of writes
+determines who gets credit. See 'help upsert' for the full semantics.`
+
+const helpNamespaces = `Namespaces
+
+Valid namespaces in the golden set's toolbox-memory usage:
+
+  bug_pattern  — debugger's record of bug classes + prevention strategies
+  spec_gap     — what the spec should have included (reviewer, planner)
+  calibration  — estimated vs actual for features (builder, planner)
+  routing      — cross-agent orchestration signals (reserved)
+
+These are agent-emitted signal. toolbox-memory is NOT for user-facing
+lessons — those live in .claude/lessons.md (with an in-file markdown
+lifecycle managed by /pomo) and in flat-file auto-memory (which the system
+prompt handles). The three-way split is described in the repo README.
+
+Discovery: 'toolbox-memory namespaces' lists every namespace actually
+present in the DB, with per-lifecycle counts. 'toolbox-memory stats --by-ns'
+combines lifecycle totals with per-namespace breakdown.`
+
+const helpUpsert = `Upsert semantics
+
+'write --ns X --key Y --agent Z --value V' is an upsert on (X, Y):
+
+  - If no row exists: inserts a fresh row with confidence=0.5, hit_count=0,
+    lifecycle=active.
+  - If a row exists: replaces value AND agent; updates updated_at;
+    PRESERVES hit_count and confidence.
+
+The preserved hit_count is significant: 'prune' promotes active entries
+to validated once hit_count >= 2, so rewriting a well-used entry does NOT
+reset its progress toward validation.
+
+If you want to track distinct incidents separately (instead of merging into
+one row with a growing hit_count), include a discriminator in the key:
+
+  --key "nil-pointer-2026-04-23"
+  --key "nil-pointer-handler-foo"
+
+Delete + rewrite is NOT a no-op — delete clears hit_count and confidence;
+the rewrite starts fresh.`
+
+const helpExamples = `Examples
+
+Write with inline value:
+  toolbox-memory write --ns bug_pattern --agent debugger \
+    --key "nil-pointer-reset" --value '{"class":"state-corruption"}'
+
+Write from a file (preserves bytes exactly):
+  toolbox-memory write --ns spec_gap --agent reviewer \
+    --key "login-flow-gap" --value-file ./gap.json
+
+Write from stdin:
+  echo -n '{"rule":"x"}' | toolbox-memory write --ns bug_pattern \
+    --agent debugger --key inline-rule --value -
+
+Search (hyphenated tokens auto-quoted):
+  toolbox-memory search --ns bug_pattern --query "alt-screen logger"
+
+Search with native FTS5 operators:
+  toolbox-memory search --ns bug_pattern --query "alpha -beta" --raw
+
+Peek (side-effect-free read — no hit_count bump):
+  toolbox-memory peek --ns bug_pattern --key nil-pointer-reset
+
+Promote (value column untouched; promoted_to set):
+  toolbox-memory promote --ns bug_pattern --key nil-pointer-reset \
+    --to "CLAUDE.md Error Handling"
+
+Stats with per-namespace breakdown:
+  toolbox-memory stats --by-ns
+
+List every namespace in the DB:
+  toolbox-memory namespaces
+
+Run lifecycle transitions (active->validated, active->stale, stale->archived):
+  toolbox-memory prune`
 
 // openDB opens the database using the --db flag value, or the default path.
 func openDB(dbPath string) (*memory.DB, error) {
@@ -90,6 +235,17 @@ func openDB(dbPath string) (*memory.DB, error) {
 func fatal(format string, args ...interface{}) {
 	fmt.Fprintf(os.Stderr, format+"\n", args...)
 	os.Exit(1)
+}
+
+// withExample overrides fs.Usage to include an example block after the
+// auto-generated flag listing. Agents and humans running 'toolbox-memory
+// <cmd> --help' see a concrete invocation alongside the flag syntax.
+func withExample(fs *flag.FlagSet, example string) {
+	fs.Usage = func() {
+		fmt.Fprintf(os.Stderr, "Usage of %s:\n", fs.Name())
+		fs.PrintDefaults()
+		fmt.Fprintf(os.Stderr, "\nExample:\n  %s\n", example)
+	}
 }
 
 func jsonOut(v interface{}) {
@@ -105,6 +261,7 @@ func jsonOut(v interface{}) {
 func cmdInit(args []string) {
 	fs := flag.NewFlagSet("init", flag.ExitOnError)
 	dbPath := fs.String("db", "", "database path")
+	withExample(fs, "toolbox-memory init --db /tmp/toolbox.db")
 	fs.Parse(args)
 
 	db, err := openDB(*dbPath)
@@ -123,6 +280,7 @@ func cmdWrite(args []string) {
 	key := fs.String("key", "", "key (required)")
 	value := fs.String("value", "", "value (use '-' for stdin; mutually exclusive with --value-file)")
 	valueFile := fs.String("value-file", "", "read value from PATH (mutually exclusive with --value)")
+	withExample(fs, `toolbox-memory write --ns bug_pattern --agent debugger --key nil-pointer-reset --value '{"class":"state-corruption"}'`)
 	fs.Parse(args)
 
 	if *ns == "" || *agent == "" || *key == "" {
@@ -189,6 +347,7 @@ func cmdSearch(args []string) {
 	query := fs.String("query", "", "search query (required)")
 	limitStr := fs.String("limit", "10", "max results")
 	raw := fs.Bool("raw", false, "pass query to FTS5 unchanged (bypass hyphen-safe sanitization)")
+	withExample(fs, `toolbox-memory search --ns bug_pattern --query "alt-screen logger"`)
 	fs.Parse(args)
 
 	if *ns == "" || *query == "" {
@@ -227,6 +386,7 @@ func cmdRead(args []string) {
 	dbPath := fs.String("db", "", "database path")
 	ns := fs.String("ns", "", "namespace (required)")
 	key := fs.String("key", "", "key (required)")
+	withExample(fs, "toolbox-memory read --ns bug_pattern --key nil-pointer-reset")
 	fs.Parse(args)
 
 	if *ns == "" || *key == "" {
@@ -252,6 +412,7 @@ func cmdPeek(args []string) {
 	dbPath := fs.String("db", "", "database path")
 	ns := fs.String("ns", "", "namespace (required)")
 	key := fs.String("key", "", "key (required)")
+	withExample(fs, "toolbox-memory peek --ns bug_pattern --key nil-pointer-reset")
 	fs.Parse(args)
 
 	if *ns == "" || *key == "" {
@@ -276,6 +437,7 @@ func cmdList(args []string) {
 	fs := flag.NewFlagSet("list", flag.ExitOnError)
 	dbPath := fs.String("db", "", "database path")
 	ns := fs.String("ns", "", "namespace (required)")
+	withExample(fs, "toolbox-memory list --ns bug_pattern")
 	fs.Parse(args)
 
 	if *ns == "" {
@@ -309,6 +471,7 @@ func cmdDelete(args []string) {
 	dbPath := fs.String("db", "", "database path")
 	ns := fs.String("ns", "", "namespace (required)")
 	key := fs.String("key", "", "key (required)")
+	withExample(fs, "toolbox-memory delete --ns bug_pattern --key stale-pattern")
 	fs.Parse(args)
 
 	if *ns == "" || *key == "" {
@@ -336,6 +499,7 @@ func cmdPrune(args []string) {
 	fs := flag.NewFlagSet("prune", flag.ExitOnError)
 	dbPath := fs.String("db", "", "database path")
 	maxActive := fs.Int("max-active", 200, "max active entries before overflow archival")
+	withExample(fs, "toolbox-memory prune")
 	fs.Parse(args)
 
 	db, err := openDB(*dbPath)
@@ -361,6 +525,7 @@ func cmdPromote(args []string) {
 	ns := fs.String("ns", "", "namespace (required)")
 	key := fs.String("key", "", "key (required)")
 	to := fs.String("to", "", "promotion target (required)")
+	withExample(fs, `toolbox-memory promote --ns bug_pattern --key nil-pointer-reset --to "CLAUDE.md Error Handling"`)
 	fs.Parse(args)
 
 	if *ns == "" || *key == "" || *to == "" {
@@ -389,6 +554,7 @@ func cmdStats(args []string) {
 	fs := flag.NewFlagSet("stats", flag.ExitOnError)
 	dbPath := fs.String("db", "", "database path")
 	byNs := fs.Bool("by-ns", false, "include per-namespace breakdown")
+	withExample(fs, "toolbox-memory stats --by-ns")
 	fs.Parse(args)
 
 	db, err := openDB(*dbPath)
@@ -420,6 +586,7 @@ func cmdStats(args []string) {
 func cmdNamespaces(args []string) {
 	fs := flag.NewFlagSet("namespaces", flag.ExitOnError)
 	dbPath := fs.String("db", "", "database path")
+	withExample(fs, "toolbox-memory namespaces")
 	fs.Parse(args)
 
 	db, err := openDB(*dbPath)
