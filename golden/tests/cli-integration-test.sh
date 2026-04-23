@@ -91,6 +91,39 @@ else
   FAIL=$((FAIL + 1))
 fi
 
+# --- peek (side-effect-free) ---
+check_output "peek returns entry" '"key": "test-pattern-1"' \
+  "$BINARY" peek --db "$DB" --ns lesson --key "test-pattern-1"
+
+# Seed a fresh entry and verify peek doesn't mutate hit_count.
+"$BINARY" write --db "$DB" --ns lesson --agent pomo --key "peek-target" --value '{"a":"b"}' >/dev/null
+"$BINARY" peek --db "$DB" --ns lesson --key "peek-target" >/dev/null
+"$BINARY" peek --db "$DB" --ns lesson --key "peek-target" >/dev/null
+"$BINARY" peek --db "$DB" --ns lesson --key "peek-target" >/dev/null
+# Now a single read should bump hit_count to exactly 1, then another peek reads it back unchanged.
+"$BINARY" read --db "$DB" --ns lesson --key "peek-target" >/dev/null
+OUTPUT=$("$BINARY" peek --db "$DB" --ns lesson --key "peek-target" 2>&1)
+if echo "$OUTPUT" | grep -q '"hitCount": 1'; then
+  echo "  PASS  peek is side-effect-free (hitCount=1 after 3 peeks + 1 read)"
+  PASS=$((PASS + 1))
+else
+  echo "  FAIL  peek is side-effect-free"
+  echo "        got: $(echo "$OUTPUT" | grep hitCount)"
+  FAIL=$((FAIL + 1))
+fi
+
+# peek on missing key exits non-zero
+"$BINARY" peek --db "$DB" --ns lesson --key "does-not-exist" >/dev/null 2>&1 && {
+  echo "  FAIL  peek on missing key should exit non-zero"
+  FAIL=$((FAIL + 1))
+} || {
+  echo "  PASS  peek on missing key exits non-zero"
+  PASS=$((PASS + 1))
+}
+
+# Clean up the peek-target so it doesn't disturb the list count later.
+"$BINARY" delete --db "$DB" --ns lesson --key "peek-target" >/dev/null
+
 # --- search ---
 check_output "search finds entry" "test-pattern-1" \
   "$BINARY" search --db "$DB" --ns lesson --query "bad approach"

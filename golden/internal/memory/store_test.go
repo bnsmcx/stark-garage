@@ -108,6 +108,46 @@ func TestGetDoesNotBumpConfidence(t *testing.T) {
 	}
 }
 
+func TestPeekNoSideEffects(t *testing.T) {
+	db := mustOpenInMemory(t)
+	defer db.Close()
+
+	_, err := db.Store("bug_pattern", "debugger", "peek-target", "v")
+	if err != nil {
+		t.Fatalf("Store: %v", err)
+	}
+
+	before, err := db.Peek("bug_pattern", "peek-target")
+	if err != nil {
+		t.Fatalf("Peek: %v", err)
+	}
+
+	// Multiple peeks must not touch hit_count, updated_at, or confidence.
+	db.Peek("bug_pattern", "peek-target")
+	db.Peek("bug_pattern", "peek-target")
+	after, _ := db.Peek("bug_pattern", "peek-target")
+
+	if after.HitCount != before.HitCount {
+		t.Errorf("HitCount changed: before=%d after=%d", before.HitCount, after.HitCount)
+	}
+	if after.Confidence != before.Confidence {
+		t.Errorf("Confidence changed: before=%f after=%f", before.Confidence, after.Confidence)
+	}
+	if !after.UpdatedAt.Equal(before.UpdatedAt) {
+		t.Errorf("UpdatedAt changed: before=%v after=%v", before.UpdatedAt, after.UpdatedAt)
+	}
+}
+
+func TestPeekNotFound(t *testing.T) {
+	db := mustOpenInMemory(t)
+	defer db.Close()
+
+	_, err := db.Peek("lesson", "nonexistent")
+	if err != ErrNotFound {
+		t.Errorf("Peek nonexistent: got %v, want ErrNotFound", err)
+	}
+}
+
 func TestGetNotFound(t *testing.T) {
 	db := mustOpenInMemory(t)
 	defer db.Close()

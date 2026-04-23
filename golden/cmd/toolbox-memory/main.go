@@ -32,6 +32,8 @@ func main() {
 		cmdSearch(os.Args[2:])
 	case "read":
 		cmdRead(os.Args[2:])
+	case "peek":
+		cmdPeek(os.Args[2:])
 	case "list":
 		cmdList(os.Args[2:])
 	case "delete":
@@ -61,6 +63,7 @@ Commands:
   write     Store a memory entry
   search    Full-text search within a namespace
   read      Get a single entry by namespace+key (increments hit_count)
+  peek      Get a single entry by namespace+key (no side effects — read-only)
   list      List active/validated entries in a namespace
   delete    Delete an entry by namespace+key
   prune     Run lifecycle transitions (active->stale->archived)
@@ -199,6 +202,31 @@ func cmdRead(args []string) {
 	entry, err := db.Get(*ns, *key)
 	if err != nil {
 		fatal("read failed: %v", err)
+	}
+
+	jsonOut(entry)
+}
+
+func cmdPeek(args []string) {
+	fs := flag.NewFlagSet("peek", flag.ExitOnError)
+	dbPath := fs.String("db", "", "database path")
+	ns := fs.String("ns", "", "namespace (required)")
+	key := fs.String("key", "", "key (required)")
+	fs.Parse(args)
+
+	if *ns == "" || *key == "" {
+		fatal("peek requires --ns and --key")
+	}
+
+	db, err := openDB(*dbPath)
+	if err != nil {
+		fatal("open db: %v", err)
+	}
+	defer db.Close()
+
+	entry, err := db.Peek(*ns, *key)
+	if err != nil {
+		fatal("peek failed: %v", err)
 	}
 
 	jsonOut(entry)
