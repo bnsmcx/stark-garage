@@ -235,6 +235,68 @@ func TestStats(t *testing.T) {
 	}
 }
 
+func TestNamespaces(t *testing.T) {
+	db := mustOpenInMemory(t)
+	defer db.Close()
+
+	db.Store("bug_pattern", "debugger", "b1", "v")
+	db.Store("bug_pattern", "debugger", "b2", "v")
+	db.Store("lesson", "pomo", "l1", "v")
+	db.Store("calibration", "planner", "c1", "v")
+
+	db.sql.Exec(`UPDATE memories SET lifecycle = 'validated' WHERE key = 'b2'`)
+	db.sql.Exec(`UPDATE memories SET lifecycle = 'archived' WHERE key = 'c1'`)
+
+	out, err := db.Namespaces()
+	if err != nil {
+		t.Fatalf("Namespaces: %v", err)
+	}
+
+	if len(out) != 3 {
+		t.Fatalf("expected 3 namespaces, got %d: %+v", len(out), out)
+	}
+
+	// Results are sorted alphabetically.
+	if out[0].Namespace != "bug_pattern" {
+		t.Errorf("out[0].Namespace = %q, want %q", out[0].Namespace, "bug_pattern")
+	}
+	if out[1].Namespace != "calibration" {
+		t.Errorf("out[1].Namespace = %q, want %q", out[1].Namespace, "calibration")
+	}
+	if out[2].Namespace != "lesson" {
+		t.Errorf("out[2].Namespace = %q, want %q", out[2].Namespace, "lesson")
+	}
+
+	// bug_pattern: 1 active + 1 validated = 2 total
+	if out[0].Active != 1 || out[0].Validated != 1 || out[0].Total != 2 {
+		t.Errorf("bug_pattern = %+v, want Active=1 Validated=1 Total=2", out[0])
+	}
+	// calibration: 1 archived = 1 total
+	if out[1].Archived != 1 || out[1].Total != 1 {
+		t.Errorf("calibration = %+v, want Archived=1 Total=1", out[1])
+	}
+	// lesson: 1 active = 1 total
+	if out[2].Active != 1 || out[2].Total != 1 {
+		t.Errorf("lesson = %+v, want Active=1 Total=1", out[2])
+	}
+}
+
+func TestNamespacesEmpty(t *testing.T) {
+	db := mustOpenInMemory(t)
+	defer db.Close()
+
+	out, err := db.Namespaces()
+	if err != nil {
+		t.Fatalf("Namespaces: %v", err)
+	}
+	if out == nil {
+		t.Error("Namespaces returned nil slice, want empty non-nil slice")
+	}
+	if len(out) != 0 {
+		t.Errorf("expected 0 namespaces, got %d", len(out))
+	}
+}
+
 func TestStatsEmpty(t *testing.T) {
 	db := mustOpenInMemory(t)
 	defer db.Close()

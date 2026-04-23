@@ -218,6 +218,62 @@ OUTPUT=$("$BINARY" search --db "$DB" 2>&1) && {
   PASS=$((PASS + 1))
 }
 
+# --- write --value-file ---
+VAL_FILE="$(dirname "$DB")/val.json"
+printf '{"rule":"from-file"}' > "$VAL_FILE"
+check_output "write --value-file" '"status": "ok"' \
+  "$BINARY" write --db "$DB" --ns bug_pattern --agent t --key vf --value-file "$VAL_FILE"
+
+check_output "value-file round-trip" 'from-file' \
+  "$BINARY" read --db "$DB" --ns bug_pattern --key vf
+
+# --- write --value - (stdin) ---
+OUTPUT=$(printf 'stdin-value' | "$BINARY" write --db "$DB" --ns bug_pattern --agent t --key sv --value - 2>&1)
+if echo "$OUTPUT" | grep -q '"status": "ok"'; then
+  echo "  PASS  write --value - (stdin)"
+  PASS=$((PASS + 1))
+else
+  echo "  FAIL  write --value - (stdin)"
+  echo "        got: $OUTPUT"
+  FAIL=$((FAIL + 1))
+fi
+
+check_output "stdin round-trip" 'stdin-value' \
+  "$BINARY" read --db "$DB" --ns bug_pattern --key sv
+
+# --- mutual exclusion ---
+"$BINARY" write --db "$DB" --ns bug_pattern --agent t --key x --value a --value-file "$VAL_FILE" >/dev/null 2>&1 && {
+  echo "  FAIL  mutual exclusion --value + --value-file should exit non-zero"
+  FAIL=$((FAIL + 1))
+} || {
+  echo "  PASS  mutual exclusion --value + --value-file exits non-zero"
+  PASS=$((PASS + 1))
+}
+
+# --- namespaces ---
+check_output "namespaces lists bug_pattern" '"namespace": "bug_pattern"' \
+  "$BINARY" namespaces --db "$DB"
+
+check_output "namespaces lists lesson" '"namespace": "lesson"' \
+  "$BINARY" namespaces --db "$DB"
+
+# --- stats --by-ns ---
+check_output "stats --by-ns has byNamespace" '"byNamespace"' \
+  "$BINARY" stats --db "$DB" --by-ns
+
+check_output "stats --by-ns has lifecycle" '"lifecycle"' \
+  "$BINARY" stats --db "$DB" --by-ns
+
+# --- stats default shape unchanged (no byNamespace key) ---
+OUTPUT=$("$BINARY" stats --db "$DB" 2>&1)
+if echo "$OUTPUT" | grep -q '"byNamespace"'; then
+  echo "  FAIL  default stats should not include byNamespace"
+  FAIL=$((FAIL + 1))
+else
+  echo "  PASS  default stats shape unchanged (no byNamespace)"
+  PASS=$((PASS + 1))
+fi
+
 echo ""
 echo "=== Results: $PASS passed, $FAIL failed ==="
 

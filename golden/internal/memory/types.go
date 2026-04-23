@@ -28,6 +28,17 @@ type LifecycleStats struct {
 	Total     int `json:"total"`
 }
 
+// NamespaceStats holds per-lifecycle counts scoped to a single namespace.
+type NamespaceStats struct {
+	Namespace string `json:"namespace"`
+	Active    int    `json:"active"`
+	Validated int    `json:"validated"`
+	Promoted  int    `json:"promoted"`
+	Stale     int    `json:"stale"`
+	Archived  int    `json:"archived"`
+	Total     int    `json:"total"`
+}
+
 // Valid lifecycle states.
 const (
 	LifecycleActive    = "active"
