@@ -12,7 +12,7 @@ Analyze all open issues, build a dependency graph, and produce an actionable sum
 
 Query memory for relevant lessons before beginning:
 ```bash
-toolbox-memory search --ns lesson --query "triage dependency blocked"
+grep -iE "triage|dependency|blocked" .claude/lessons.md
 ```
 Apply any returned lessons to the analysis below.
 

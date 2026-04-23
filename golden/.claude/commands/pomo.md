@@ -43,30 +43,27 @@ If skipping, tell user why and stop.
 
 ### 3. Check for Duplicates
 
-Check both sources:
-
-1. Read `.claude/lessons.md` for existing coverage
-2. Search memory:
-   ```bash
-   toolbox-memory search --ns lesson --query "<pattern keywords>"
-   ```
+```bash
+grep -ri "<pattern keywords>" .claude/lessons.md .claude/lessons-archive.md
+```
 
 If duplicate found:
-- **Same pattern:** Update existing lesson, increment incident count
+- **Same pattern:** Update existing lesson, increment incident count in place
 - **Related but distinct:** Create new lesson, cross-reference
 
 ### 3b. Lifecycle Management
 
-If lessons.md exceeds 40 entries, prune:
-1. Scan for promoted lessons (already in CLAUDE.md or commands) → archive
-2. Scan for stale lessons (no recent matches) → archive
-3. Move to `.claude/lessons-archive.md`
-4. Run `toolbox-memory prune` for memory lifecycle transitions
-5. Report: "Pruned N lessons. Active: NN/40."
+`.claude/lessons.md` is organized into four sections: `## Active`, `## Validated`, `## Promoted`, and a pointer to `.claude/lessons-archive.md`. Before writing a new lesson, scan for pruning candidates:
+
+1. **Stale `## Active` entries** (no matching incident in 60+ days) → move to `.claude/lessons-archive.md` under the archival date
+2. **`## Active` entries with a second matching incident** → move to `## Validated`
+3. **Lessons already encoded in CLAUDE.md or a command** → move content out; leave a one-line stub under `## Promoted` pointing to the CLAUDE.md section
+
+Report: "Pruned N lessons. Active: NN/40."
 
 ### 4. Write Lesson
 
-Add to `.claude/lessons.md` per `agent_docs/self-improvement.md` format:
+Add to the `## Active` section of `.claude/lessons.md` per `agent_docs/self-improvement.md` format:
 
 ```markdown
 ### [Pattern name]
@@ -75,37 +72,23 @@ Add to `.claude/lessons.md` per `agent_docs/self-improvement.md` format:
 - **Why:** [root cause or reasoning]
 ```
 
-Also write to memory:
-```bash
-toolbox-memory write --ns lesson --agent pomo --key "<pattern-name>" --value '{"wrong":"...","right":"...","why":"...","scope":"<scope>"}'
-```
-
-**Lifecycle:**
-- New lessons → Active (default)
-- 2nd+ matching incident → update existing, mark Validated
-- hit_count >= 3 → flag for promotion (Step 5)
+**Lifecycle transitions (all markdown edits — no CLI calls):**
+- New lessons → append under `## Active`
+- 2nd+ matching incident → update existing, move to `## Validated`
+- 3+ incidents → propose promotion (Step 5)
 
 ### 5. Promotion Check
 
-Check memory for high-hit lessons:
-```bash
-toolbox-memory read --ns lesson --key "<pattern-name>"
-```
+Scan `## Validated` for entries with 3+ confirmed incidents. For each:
 
-If hit_count >= 3: propose promoting to CLAUDE.md instruction or command rule. Ask user before modifying CLAUDE.md.
-
-After promotion:
-```bash
-toolbox-memory promote --ns lesson --key "<pattern-name>" --to "CLAUDE.md [section]"
-```
-
-Remove from lessons.md with note: "Promoted to CLAUDE.md [section]"
+1. Propose promoting to a CLAUDE.md section or command rule. Ask user before modifying CLAUDE.md.
+2. On approval: move the entry's content into the target CLAUDE.md section, and leave a one-line stub under `## Promoted` in `.claude/lessons.md` of the form `- [Pattern name] → CLAUDE.md [section]`.
 
 ### 6. Summarize
 
 Tell user:
 - What lesson was captured (or why none was needed)
-- Which files updated (lessons.md, memory)
+- Which files updated (lessons.md, archive, CLAUDE.md)
 - Whether CLAUDE.md was modified
 - Promotion candidates (if any)
 
@@ -113,6 +96,5 @@ Tell user:
 
 - Lessons must be **generalizable** — not incident-specific
 - Always check for duplicates before writing
-- Always write to BOTH lessons.md AND memory
 - Keep lessons concise
 - Guidelines only — not code examples unless significantly clearer

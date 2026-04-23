@@ -63,25 +63,25 @@ check "db file exists after init" test -f "$DB"
 
 # --- write ---
 check_output "write returns ok" '"status": "ok"' \
-  "$BINARY" write --db "$DB" --ns lesson --agent pomo --key "test-pattern-1" --value '{"wrong":"bad approach","right":"good approach","why":"because"}'
+  "$BINARY" write --db "$DB" --ns calibration --agent planner --key "test-pattern-1" --value '{"wrong":"bad approach","right":"good approach","why":"because"}'
 
 check_output "write second entry" '"status": "ok"' \
   "$BINARY" write --db "$DB" --ns bug_pattern --agent debugger --key "nil-pointer-reset" --value '{"class":"state-corruption","prevention":"reconstruct after destroy"}'
 
 check_output "write third entry" '"status": "ok"' \
-  "$BINARY" write --db "$DB" --ns lesson --agent pomo --key "test-pattern-2" --value '{"wrong":"wrong way","right":"right way","why":"reasons"}'
+  "$BINARY" write --db "$DB" --ns calibration --agent planner --key "test-pattern-2" --value '{"wrong":"wrong way","right":"right way","why":"reasons"}'
 
 # --- read ---
 check_output "read returns entry" '"key": "test-pattern-1"' \
-  "$BINARY" read --db "$DB" --ns lesson --key "test-pattern-1"
+  "$BINARY" read --db "$DB" --ns calibration --key "test-pattern-1"
 
 check_output "read returns value" "bad approach" \
-  "$BINARY" read --db "$DB" --ns lesson --key "test-pattern-1"
+  "$BINARY" read --db "$DB" --ns calibration --key "test-pattern-1"
 
 # --- read increments hit_count ---
 # Read twice more, then check hitCount
-"$BINARY" read --db "$DB" --ns lesson --key "test-pattern-1" >/dev/null 2>&1
-OUTPUT=$("$BINARY" read --db "$DB" --ns lesson --key "test-pattern-1" 2>&1)
+"$BINARY" read --db "$DB" --ns calibration --key "test-pattern-1" >/dev/null 2>&1
+OUTPUT=$("$BINARY" read --db "$DB" --ns calibration --key "test-pattern-1" 2>&1)
 if echo "$OUTPUT" | grep -q '"hitCount": [3-9]'; then
   echo "  PASS  read increments hitCount (3+ after 3 reads)"
   PASS=$((PASS + 1))
@@ -93,16 +93,16 @@ fi
 
 # --- peek (side-effect-free) ---
 check_output "peek returns entry" '"key": "test-pattern-1"' \
-  "$BINARY" peek --db "$DB" --ns lesson --key "test-pattern-1"
+  "$BINARY" peek --db "$DB" --ns calibration --key "test-pattern-1"
 
 # Seed a fresh entry and verify peek doesn't mutate hit_count.
-"$BINARY" write --db "$DB" --ns lesson --agent pomo --key "peek-target" --value '{"a":"b"}' >/dev/null
-"$BINARY" peek --db "$DB" --ns lesson --key "peek-target" >/dev/null
-"$BINARY" peek --db "$DB" --ns lesson --key "peek-target" >/dev/null
-"$BINARY" peek --db "$DB" --ns lesson --key "peek-target" >/dev/null
+"$BINARY" write --db "$DB" --ns calibration --agent planner --key "peek-target" --value '{"a":"b"}' >/dev/null
+"$BINARY" peek --db "$DB" --ns calibration --key "peek-target" >/dev/null
+"$BINARY" peek --db "$DB" --ns calibration --key "peek-target" >/dev/null
+"$BINARY" peek --db "$DB" --ns calibration --key "peek-target" >/dev/null
 # Now a single read should bump hit_count to exactly 1, then another peek reads it back unchanged.
-"$BINARY" read --db "$DB" --ns lesson --key "peek-target" >/dev/null
-OUTPUT=$("$BINARY" peek --db "$DB" --ns lesson --key "peek-target" 2>&1)
+"$BINARY" read --db "$DB" --ns calibration --key "peek-target" >/dev/null
+OUTPUT=$("$BINARY" peek --db "$DB" --ns calibration --key "peek-target" 2>&1)
 if echo "$OUTPUT" | grep -q '"hitCount": 1'; then
   echo "  PASS  peek is side-effect-free (hitCount=1 after 3 peeks + 1 read)"
   PASS=$((PASS + 1))
@@ -113,7 +113,7 @@ else
 fi
 
 # peek on missing key exits non-zero
-"$BINARY" peek --db "$DB" --ns lesson --key "does-not-exist" >/dev/null 2>&1 && {
+"$BINARY" peek --db "$DB" --ns calibration --key "does-not-exist" >/dev/null 2>&1 && {
   echo "  FAIL  peek on missing key should exit non-zero"
   FAIL=$((FAIL + 1))
 } || {
@@ -122,19 +122,19 @@ fi
 }
 
 # Clean up the peek-target so it doesn't disturb the list count later.
-"$BINARY" delete --db "$DB" --ns lesson --key "peek-target" >/dev/null
+"$BINARY" delete --db "$DB" --ns calibration --key "peek-target" >/dev/null
 
 # --- search ---
 check_output "search finds entry" "test-pattern-1" \
-  "$BINARY" search --db "$DB" --ns lesson --query "bad approach"
+  "$BINARY" search --db "$DB" --ns calibration --query "bad approach"
 
 check_output "search respects namespace" "nil-pointer" \
   "$BINARY" search --db "$DB" --ns bug_pattern --query "state corruption"
 
 # Search in wrong namespace should not find it
-OUTPUT=$("$BINARY" search --db "$DB" --ns lesson --query "state corruption destroy" 2>&1)
+OUTPUT=$("$BINARY" search --db "$DB" --ns calibration --query "state corruption destroy" 2>&1)
 if echo "$OUTPUT" | grep -q "nil-pointer-reset"; then
-  echo "  FAIL  search namespace isolation (found bug_pattern entry in lesson ns)"
+  echo "  FAIL  search namespace isolation (found bug_pattern entry in calibration ns)"
   FAIL=$((FAIL + 1))
 else
   echo "  PASS  search namespace isolation"
@@ -142,10 +142,10 @@ else
 fi
 
 # --- list ---
-OUTPUT=$("$BINARY" list --db "$DB" --ns lesson 2>&1)
+OUTPUT=$("$BINARY" list --db "$DB" --ns calibration 2>&1)
 COUNT=$(echo "$OUTPUT" | grep -c '"key"' || true)
 if [ "$COUNT" -eq 2 ]; then
-  echo "  PASS  list returns 2 lesson entries"
+  echo "  PASS  list returns 2 calibration entries"
   PASS=$((PASS + 1))
 else
   echo "  FAIL  list returns $COUNT entries, want 2"
@@ -161,14 +161,14 @@ check_output "stats shows total" '"total": 3' \
 
 # --- promote ---
 check_output "promote returns ok" '"status": "promoted"' \
-  "$BINARY" promote --db "$DB" --ns lesson --key "test-pattern-1" --to "CLAUDE.md Development Philosophy"
+  "$BINARY" promote --db "$DB" --ns calibration --key "test-pattern-1" --to "CLAUDE.md Development Philosophy"
 
 # Verify promoted entry shows in stats
 check_output "stats shows promoted" '"promoted": 1' \
   "$BINARY" stats --db "$DB"
 
 # Verify promoted entry excluded from list
-OUTPUT=$("$BINARY" list --db "$DB" --ns lesson 2>&1)
+OUTPUT=$("$BINARY" list --db "$DB" --ns calibration 2>&1)
 if echo "$OUTPUT" | grep -q "test-pattern-1"; then
   echo "  FAIL  list excludes promoted entries"
   FAIL=$((FAIL + 1))
@@ -183,17 +183,17 @@ check_output "prune with nothing to do" '"transitions": 0' \
 
 # --- write + upsert ---
 check_output "upsert updates value" '"status": "ok"' \
-  "$BINARY" write --db "$DB" --ns lesson --agent pomo --key "test-pattern-2" --value '{"wrong":"updated wrong","right":"updated right","why":"updated"}'
+  "$BINARY" write --db "$DB" --ns calibration --agent planner --key "test-pattern-2" --value '{"wrong":"updated wrong","right":"updated right","why":"updated"}'
 
 check_output "upsert preserved key" "updated wrong" \
-  "$BINARY" read --db "$DB" --ns lesson --key "test-pattern-2"
+  "$BINARY" read --db "$DB" --ns calibration --key "test-pattern-2"
 
 # --- delete ---
 check_output "delete returns ok" '"status": "deleted"' \
-  "$BINARY" delete --db "$DB" --ns lesson --key "test-pattern-2"
+  "$BINARY" delete --db "$DB" --ns calibration --key "test-pattern-2"
 
 # Verify deleted
-OUTPUT=$("$BINARY" read --db "$DB" --ns lesson --key "test-pattern-2" 2>&1) && {
+OUTPUT=$("$BINARY" read --db "$DB" --ns calibration --key "test-pattern-2" 2>&1) && {
   echo "  FAIL  delete removes entry (read succeeded)"
   FAIL=$((FAIL + 1))
 } || {
@@ -254,7 +254,7 @@ check_output "stdin round-trip" 'stdin-value' \
 check_output "namespaces lists bug_pattern" '"namespace": "bug_pattern"' \
   "$BINARY" namespaces --db "$DB"
 
-check_output "namespaces lists lesson" '"namespace": "lesson"' \
+check_output "namespaces lists calibration" '"namespace": "calibration"' \
   "$BINARY" namespaces --db "$DB"
 
 # --- stats --by-ns ---
