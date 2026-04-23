@@ -306,6 +306,66 @@ else
   PASS=$((PASS + 1))
 fi
 
+# --- help topics (#12) ---
+check_output "help lifecycle mentions validated" "validated" \
+  "$BINARY" help lifecycle
+
+check_output "help lifecycle mentions prune" "prune" \
+  "$BINARY" help lifecycle
+
+check_output "help agent explains audit metadata" "audit" \
+  "$BINARY" help agent
+
+check_output "help namespaces lists bug_pattern" "bug_pattern" \
+  "$BINARY" help namespaces
+
+check_output "help upsert explains replace semantics" "upsert" \
+  "$BINARY" help upsert
+
+check_output "help examples shows peek" "peek" \
+  "$BINARY" help examples
+
+# help with no topic lists them
+check_output "help (no topic) lists topics" "lifecycle" \
+  "$BINARY" help
+
+# help with unknown topic exits non-zero and lists topics on stderr
+OUTPUT=$("$BINARY" help bogus 2>&1) && {
+  echo "  FAIL  help unknown topic should exit non-zero"
+  FAIL=$((FAIL + 1))
+} || {
+  if echo "$OUTPUT" | grep -q "lifecycle"; then
+    echo "  PASS  help unknown topic exits non-zero and lists topics"
+    PASS=$((PASS + 1))
+  else
+    echo "  FAIL  help unknown topic: missing topic list"
+    echo "        got: $OUTPUT"
+    FAIL=$((FAIL + 1))
+  fi
+}
+
+# top-level usage mentions peek, namespaces, and help pointer (on stdout)
+OUTPUT=$("$BINARY" --help 2>/dev/null)
+for kw in peek namespaces "help <topic>"; do
+  if echo "$OUTPUT" | grep -q "$kw"; then
+    echo "  PASS  usage mentions $kw (on stdout)"
+    PASS=$((PASS + 1))
+  else
+    echo "  FAIL  usage missing $kw (or routed to stderr)"
+    FAIL=$((FAIL + 1))
+  fi
+done
+
+# --help success path writes NOTHING to stderr
+STDERR=$("$BINARY" --help 2>&1 >/dev/null)
+if [ -z "$STDERR" ]; then
+  echo "  PASS  --help writes to stdout only (stderr empty)"
+  PASS=$((PASS + 1))
+else
+  echo "  FAIL  --help leaked to stderr: $STDERR"
+  FAIL=$((FAIL + 1))
+fi
+
 echo ""
 echo "=== Results: $PASS passed, $FAIL failed ==="
 
