@@ -169,14 +169,27 @@ func (d *DB) migrate() error {
 	}
 
 	for _, stmt := range ddl {
-		if _, err := d.sql.Exec(stmt); err != nil {
-			// Suppress "already exists" / "duplicate column" errors for idempotency.
+		result, err := d.sql.Exec(stmt)
+		if err != nil {
+			// Suppress expected-idempotent errors ("already exists" for CREATE
+			// statements; "duplicate column" for repeat ALTER ADD COLUMN). Log
+			// the suppression so operators inspecting an Open() failure can
+			// audit which DDL silently no-op'd.
 			msg := err.Error()
 			if strings.Contains(msg, "already exists") ||
 				strings.Contains(msg, "duplicate column") {
+				fmt.Fprintf(os.Stderr, "toolbox-memory: migration step is idempotent no-op: %s\n", msg)
 				continue
 			}
 			return fmt.Errorf("migration failed: %w", err)
+		}
+
+		// Surface rows affected for the one-time legacy promote backfill so
+		// operators know how many corrupted rows were repaired on upgrade.
+		if strings.Contains(stmt, "promoted_to = substr") {
+			if n, _ := result.RowsAffected(); n > 0 {
+				fmt.Fprintf(os.Stderr, "toolbox-memory: backfilled %d legacy promoted entries (split value and promoted_to)\n", n)
+			}
 		}
 	}
 
