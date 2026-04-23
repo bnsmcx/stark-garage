@@ -144,6 +144,59 @@ func (d *DB) Promote(namespace, key, promotedTo string) error {
 	return nil
 }
 
+// Namespaces returns per-namespace lifecycle counts, sorted alphabetically
+// by namespace. Returns an empty non-nil slice when the DB has no entries.
+func (d *DB) Namespaces() ([]NamespaceStats, error) {
+	rows, err := d.sql.Query(
+		`SELECT namespace, lifecycle, COUNT(*)
+		 FROM memories
+		 GROUP BY namespace, lifecycle
+		 ORDER BY namespace`,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("namespaces: %w", err)
+	}
+	defer rows.Close()
+
+	byNS := make(map[string]*NamespaceStats)
+	order := []string{}
+	for rows.Next() {
+		var ns, lc string
+		var n int
+		if err := rows.Scan(&ns, &lc, &n); err != nil {
+			return nil, fmt.Errorf("namespaces scan: %w", err)
+		}
+		s, ok := byNS[ns]
+		if !ok {
+			s = &NamespaceStats{Namespace: ns}
+			byNS[ns] = s
+			order = append(order, ns)
+		}
+		switch lc {
+		case LifecycleActive:
+			s.Active = n
+		case LifecycleValidated:
+			s.Validated = n
+		case LifecyclePromoted:
+			s.Promoted = n
+		case LifecycleStale:
+			s.Stale = n
+		case LifecycleArchived:
+			s.Archived = n
+		}
+		s.Total += n
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("namespaces rows error: %w", err)
+	}
+
+	out := make([]NamespaceStats, 0, len(order))
+	for _, ns := range order {
+		out = append(out, *byNS[ns])
+	}
+	return out, nil
+}
+
 // Stats returns counts per lifecycle state.
 func (d *DB) Stats() (*LifecycleStats, error) {
 	rows, err := d.sql.Query(

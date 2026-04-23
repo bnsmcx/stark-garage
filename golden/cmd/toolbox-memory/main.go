@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"io"
 	"os"
 	"strconv"
 
@@ -44,6 +45,8 @@ func main() {
 		cmdPromote(os.Args[2:])
 	case "stats":
 		cmdStats(os.Args[2:])
+	case "namespaces":
+		cmdNamespaces(os.Args[2:])
 	case "version":
 		fmt.Println(version)
 	case "help", "--help", "-h":
@@ -68,7 +71,8 @@ Commands:
   delete    Delete an entry by namespace+key
   prune     Run lifecycle transitions (active->stale->archived)
   promote   Mark an entry as promoted
-  stats     Print lifecycle statistics
+  stats     Print lifecycle statistics (--by-ns adds per-namespace breakdown)
+  namespaces List all namespaces with per-lifecycle counts
   version   Print version
 
 Global flag (all commands except version):
@@ -117,11 +121,46 @@ func cmdWrite(args []string) {
 	ns := fs.String("ns", "", "namespace (required)")
 	agent := fs.String("agent", "", "agent name (required)")
 	key := fs.String("key", "", "key (required)")
-	value := fs.String("value", "", "value (required)")
+	value := fs.String("value", "", "value (use '-' for stdin; mutually exclusive with --value-file)")
+	valueFile := fs.String("value-file", "", "read value from PATH (mutually exclusive with --value)")
 	fs.Parse(args)
 
-	if *ns == "" || *agent == "" || *key == "" || *value == "" {
-		fatal("write requires --ns, --agent, --key, and --value")
+	if *ns == "" || *agent == "" || *key == "" {
+		fatal("write requires --ns, --agent, and --key")
+	}
+
+	valueProvided := *value != "" && *value != "-"
+	stdinRequested := *value == "-"
+	fileProvided := *valueFile != ""
+
+	set := 0
+	if valueProvided {
+		set++
+	}
+	if stdinRequested {
+		set++
+	}
+	if fileProvided {
+		set++
+	}
+	if set != 1 {
+		fatal("write requires exactly one of --value STRING, --value -, or --value-file PATH")
+	}
+
+	resolved := *value
+	switch {
+	case stdinRequested:
+		b, err := io.ReadAll(os.Stdin)
+		if err != nil {
+			fatal("read stdin: %v", err)
+		}
+		resolved = string(b)
+	case fileProvided:
+		b, err := os.ReadFile(*valueFile)
+		if err != nil {
+			fatal("read --value-file: %v", err)
+		}
+		resolved = string(b)
 	}
 
 	db, err := openDB(*dbPath)
@@ -130,7 +169,7 @@ func cmdWrite(args []string) {
 	}
 	defer db.Close()
 
-	id, err := db.Store(*ns, *agent, *key, *value)
+	id, err := db.Store(*ns, *agent, *key, resolved)
 	if err != nil {
 		fatal("write failed: %v", err)
 	}
@@ -348,6 +387,7 @@ func cmdPromote(args []string) {
 func cmdStats(args []string) {
 	fs := flag.NewFlagSet("stats", flag.ExitOnError)
 	dbPath := fs.String("db", "", "database path")
+	byNs := fs.Bool("by-ns", false, "include per-namespace breakdown")
 	fs.Parse(args)
 
 	db, err := openDB(*dbPath)
@@ -361,5 +401,35 @@ func cmdStats(args []string) {
 		fatal("stats failed: %v", err)
 	}
 
-	jsonOut(stats)
+	if !*byNs {
+		jsonOut(stats)
+		return
+	}
+
+	byNamespace, err := db.Namespaces()
+	if err != nil {
+		fatal("stats --by-ns: %v", err)
+	}
+	jsonOut(map[string]interface{}{
+		"lifecycle":   stats,
+		"byNamespace": byNamespace,
+	})
+}
+
+func cmdNamespaces(args []string) {
+	fs := flag.NewFlagSet("namespaces", flag.ExitOnError)
+	dbPath := fs.String("db", "", "database path")
+	fs.Parse(args)
+
+	db, err := openDB(*dbPath)
+	if err != nil {
+		fatal("open db: %v", err)
+	}
+	defer db.Close()
+
+	nss, err := db.Namespaces()
+	if err != nil {
+		fatal("namespaces failed: %v", err)
+	}
+	jsonOut(nss)
 }
