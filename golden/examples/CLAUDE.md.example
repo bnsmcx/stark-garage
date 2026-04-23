@@ -17,13 +17,14 @@
 ## Session Start
 
 1. Review `.claude/lessons.md` for patterns relevant to current work. If >40 entries, flag for pruning.
-2. Query memory for relevant lessons: `toolbox-memory search --ns lesson --query '<current scope>'`
-3. Assess state: run `/triage` or check the task tracker
-4. Decide next action: continue interrupted work, pick next task, or plan new work
+2. Assess state: run `/triage` or check the task tracker
+3. Decide next action: continue interrupted work, pick next task, or plan new work
+
+For bug patterns / spec gaps / calibration from prior work, see `toolbox-memory search --ns bug_pattern` (invoked by planner/debugger agents, not session-start boilerplate).
 
 ## Continuous Improvement
 
-Maintain `.claude/lessons.md` with patterns from corrections and reviews. See `agent_docs/self-improvement.md` for format and triggers. Lessons also persist to SQLite memory via `toolbox-memory`.
+Maintain `.claude/lessons.md` with patterns from corrections and reviews. See `agent_docs/self-improvement.md` for format and triggers.
 
 ## Issue Tracker
 

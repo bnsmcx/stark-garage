@@ -41,7 +41,7 @@ Single issue, no agents, no release context. Fast path.
 
 Query memory for relevant lessons:
 ```bash
-toolbox-memory search --ns lesson --query "<issue scope keywords>"
+grep -ri "<issue scope keywords>" .claude/lessons.md
 ```
 If results found, note them as context warnings.
 
@@ -124,7 +124,7 @@ If no open issues remain → release complete (jump to Release Completion).
 ### 3. Memory Check
 
 ```bash
-toolbox-memory search --ns lesson --query "<issue scope>"
+grep -ri "<issue scope>" .claude/lessons.md
 ```
 
 ### 4. Planner Enrichment

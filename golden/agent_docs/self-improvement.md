@@ -21,7 +21,7 @@ Guidelines:
 
 ## Triggers
 
-Update `.claude/lessons.md` AND write to memory when:
+Update `.claude/lessons.md` when:
 - After **any user correction** — capture what went wrong and the better approach
 - After **/review-pr** finds issues Claude introduced — reflect on why
 - After **/wiggum** retry failures (2+ attempts before validation passes)
@@ -29,45 +29,29 @@ Update `.claude/lessons.md` AND write to memory when:
 
 **/pomo is the primary entry point for all self-improvement.** Commands invoke
 /pomo rather than doing inline reflection. /pomo handles evaluation, deduplication,
-format compliance, lifecycle management, and memory writes.
-
-## Memory Integration
-
-When writing a lesson to `.claude/lessons.md`, also persist to SQLite memory:
-```bash
-toolbox-memory write --ns lesson --agent pomo --key "<pattern-name>" --value '{"wrong":"...","right":"...","why":"..."}'
-```
-
-When checking for existing lessons, also search memory:
-```bash
-toolbox-memory search --ns lesson --query "<pattern keywords>"
-```
+format compliance, and lifecycle management.
 
 ## Deduplication Rules
 
 Before writing a new lesson:
-1. Read `.claude/lessons.md` and check for existing coverage
-2. Search memory: `toolbox-memory search --ns lesson --query "<pattern>"`
-3. **Same pattern, new example:** Update the existing lesson's incident count
-4. **Related but distinct:** Create a new lesson and cross-reference the related one
+1. Read `.claude/lessons.md` and grep for the pattern name or keywords
+2. **Same pattern, new example:** Update the existing lesson's incident count
+3. **Related but distinct:** Create a new lesson and cross-reference the related one
 
 ## Lesson Lifecycle
 
-Every lesson has an implicit lifecycle (tracked in both lessons.md and memory):
+Every lesson has an explicit lifecycle, tracked by markdown section in `.claude/lessons.md`:
 
-1. **Active** — Recently captured, not yet proven across multiple incidents.
-2. **Validated** — Confirmed by recurrence (2+ incidents / hit_count >= 2).
-3. **Promoted** — Encoded into CLAUDE.md or a command as a permanent rule.
-   Remove from lessons.md with note: "Promoted to CLAUDE.md [section]".
-   Mark in memory: `toolbox-memory promote --ns lesson --key "<name>" --to "CLAUDE.md [section]"`
-4. **Stale** — No matching incidents in 60+ days. Candidate for archival.
+1. **Active** — Recently captured, not yet proven across multiple incidents. Sits under `## Active`.
+2. **Validated** — Confirmed by recurrence (2+ incidents). Moved to `## Validated`.
+3. **Promoted** — Encoded into CLAUDE.md or a command as a permanent rule. Move the entry into the target CLAUDE.md section; leave a one-line stub under `## Promoted` referencing the new location.
+4. **Archived** — No matching incidents in 60+ days. Moved out of `.claude/lessons.md` into `.claude/lessons-archive.md` under the archival date.
 
 ## Pruning Rules
 
 Enforced by /slim and /pomo:
 
 - **Max entries:** 40 active lessons in `.claude/lessons.md`
-- **Promotion:** When hit_count >= 3, flag for promotion to CLAUDE.md or command rule
-- **Archival:** Lessons with no hits in 60+ days move to `.claude/lessons-archive.md`
-- **Memory pruning:** Run `toolbox-memory prune` to transition lifecycle states
+- **Promotion:** When a pattern has 3+ confirmed incidents, flag for promotion to CLAUDE.md or a command rule
+- **Archival:** On `/pomo` invocation, scan `## Active` entries; any with no matching incident in 60+ days moves to `.claude/lessons-archive.md` under the date
 - **Deduplication:** Always merge rather than creating a second entry for the same pattern
