@@ -89,12 +89,13 @@ func TestGetIncrementsHitCount(t *testing.T) {
 	}
 }
 
-func TestGetBumpsConfidence(t *testing.T) {
+func TestGetDoesNotBumpConfidence(t *testing.T) {
 	db := mustOpenInMemory(t)
 	defer db.Close()
 
 	db.Store("lesson", "pomo", "key1", "value1")
-	// Initial confidence is 0.5, each Get adds 0.05
+	// Initial confidence is 0.5 and must stay that way across repeated Gets.
+	db.Get("lesson", "key1")
 	db.Get("lesson", "key1")
 	db.Get("lesson", "key1")
 
@@ -102,9 +103,8 @@ func TestGetBumpsConfidence(t *testing.T) {
 	if len(entries) != 1 {
 		t.Fatalf("expected 1 entry, got %d", len(entries))
 	}
-	// After 2 Gets: 0.5 + 0.05 + 0.05 = 0.6
-	if entries[0].Confidence < 0.59 || entries[0].Confidence > 0.61 {
-		t.Errorf("confidence = %f after 2 Gets, want ~0.6", entries[0].Confidence)
+	if entries[0].Confidence != 0.5 {
+		t.Errorf("confidence = %f after 3 Gets, want 0.5 (no auto-bump)", entries[0].Confidence)
 	}
 }
 

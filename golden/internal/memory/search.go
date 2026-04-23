@@ -8,8 +8,8 @@ import (
 
 // Search performs a BM25-ranked full-text search over stored memories.
 // Scoped to the given namespace; only returns entries with lifecycle
-// 'active' or 'validated'. Results are ordered by confidence DESC,
-// then hit_count DESC, with BM25 relevance as tiebreaker.
+// 'active' or 'validated'. Results are ordered by hit_count DESC,
+// then updated_at DESC, with BM25 relevance as tiebreaker.
 //
 // limit <= 0 defaults to 10; limit > 100 is clamped to 100.
 // Returns an empty non-nil slice when no matches are found.
@@ -35,7 +35,7 @@ func (d *DB) Search(namespace, query string, limit int) ([]MemoryEntry, error) {
 		 WHERE memories_fts MATCH ?
 		   AND m.namespace = ?
 		   AND m.lifecycle IN ('active', 'validated')
-		 ORDER BY m.confidence DESC, m.hit_count DESC, bm25(memories_fts)
+		 ORDER BY m.hit_count DESC, m.updated_at DESC, bm25(memories_fts)
 		 LIMIT ?`,
 		query, namespace, limit,
 	)
@@ -60,7 +60,7 @@ func (d *DB) Search(namespace, query string, limit int) ([]MemoryEntry, error) {
 		args = append([]interface{}{now}, args...)
 		_, _ = d.sql.Exec(
 			fmt.Sprintf(
-				`UPDATE memories SET hit_count = hit_count + 1, updated_at = ?, confidence = MIN(1.0, confidence + 0.02) WHERE id IN (%s)`,
+				`UPDATE memories SET hit_count = hit_count + 1, updated_at = ? WHERE id IN (%s)`,
 				inClause,
 			),
 			args...,
