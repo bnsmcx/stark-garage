@@ -89,12 +89,13 @@ func TestGetIncrementsHitCount(t *testing.T) {
 	}
 }
 
-func TestGetBumpsConfidence(t *testing.T) {
+func TestGetDoesNotBumpConfidence(t *testing.T) {
 	db := mustOpenInMemory(t)
 	defer db.Close()
 
 	db.Store("lesson", "pomo", "key1", "value1")
-	// Initial confidence is 0.5, each Get adds 0.05
+	// Initial confidence is 0.5 and must stay that way across repeated Gets.
+	db.Get("lesson", "key1")
 	db.Get("lesson", "key1")
 	db.Get("lesson", "key1")
 
@@ -102,9 +103,48 @@ func TestGetBumpsConfidence(t *testing.T) {
 	if len(entries) != 1 {
 		t.Fatalf("expected 1 entry, got %d", len(entries))
 	}
-	// After 2 Gets: 0.5 + 0.05 + 0.05 = 0.6
-	if entries[0].Confidence < 0.59 || entries[0].Confidence > 0.61 {
-		t.Errorf("confidence = %f after 2 Gets, want ~0.6", entries[0].Confidence)
+	if entries[0].Confidence != 0.5 {
+		t.Errorf("confidence = %f after 3 Gets, want 0.5 (no auto-bump)", entries[0].Confidence)
+	}
+}
+
+func TestPeekNoSideEffects(t *testing.T) {
+	db := mustOpenInMemory(t)
+	defer db.Close()
+
+	_, err := db.Store("bug_pattern", "debugger", "peek-target", "v")
+	if err != nil {
+		t.Fatalf("Store: %v", err)
+	}
+
+	before, err := db.Peek("bug_pattern", "peek-target")
+	if err != nil {
+		t.Fatalf("Peek: %v", err)
+	}
+
+	// Multiple peeks must not touch hit_count, updated_at, or confidence.
+	db.Peek("bug_pattern", "peek-target")
+	db.Peek("bug_pattern", "peek-target")
+	after, _ := db.Peek("bug_pattern", "peek-target")
+
+	if after.HitCount != before.HitCount {
+		t.Errorf("HitCount changed: before=%d after=%d", before.HitCount, after.HitCount)
+	}
+	if after.Confidence != before.Confidence {
+		t.Errorf("Confidence changed: before=%f after=%f", before.Confidence, after.Confidence)
+	}
+	if !after.UpdatedAt.Equal(before.UpdatedAt) {
+		t.Errorf("UpdatedAt changed: before=%v after=%v", before.UpdatedAt, after.UpdatedAt)
+	}
+}
+
+func TestPeekNotFound(t *testing.T) {
+	db := mustOpenInMemory(t)
+	defer db.Close()
+
+	_, err := db.Peek("lesson", "nonexistent")
+	if err != ErrNotFound {
+		t.Errorf("Peek nonexistent: got %v, want ErrNotFound", err)
 	}
 }
 

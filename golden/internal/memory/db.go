@@ -146,17 +146,50 @@ func (d *DB) migrate() error {
 		// Backfill FTS index (no-op if table is empty; handles upgrades).
 		`INSERT INTO memories_fts(rowid, key, value)
 			SELECT id, key, value FROM memories`,
+
+		// Additive column for promote target. Added unconditionally; the
+		// "duplicate column name" error is suppressed below for idempotency.
+		`ALTER TABLE memories ADD COLUMN promoted_to TEXT`,
+
+		// One-time backfill for rows promoted under the legacy concat scheme
+		// (value was suffixed with " [promoted to: X]"). The IS NULL guard
+		// makes this idempotent; the LIKE guard ensures we only touch rows
+		// that match the specific corrupted shape.
+		`UPDATE memories
+		 SET
+		   promoted_to = substr(
+		     value,
+		     instr(value, ' [promoted to: ') + length(' [promoted to: '),
+		     length(value) - instr(value, ' [promoted to: ') - length(' [promoted to: ')
+		   ),
+		   value = substr(value, 1, instr(value, ' [promoted to: ') - 1)
+		 WHERE lifecycle = 'promoted'
+		   AND promoted_to IS NULL
+		   AND value LIKE '% [promoted to: %]'`,
 	}
 
 	for _, stmt := range ddl {
-		if _, err := d.sql.Exec(stmt); err != nil {
-			// Suppress "already exists" / "duplicate column" errors for idempotency.
+		result, err := d.sql.Exec(stmt)
+		if err != nil {
+			// Suppress expected-idempotent errors ("already exists" for CREATE
+			// statements; "duplicate column" for repeat ALTER ADD COLUMN). Log
+			// the suppression so operators inspecting an Open() failure can
+			// audit which DDL silently no-op'd.
 			msg := err.Error()
 			if strings.Contains(msg, "already exists") ||
 				strings.Contains(msg, "duplicate column") {
+				fmt.Fprintf(os.Stderr, "toolbox-memory: migration step is idempotent no-op: %s\n", msg)
 				continue
 			}
 			return fmt.Errorf("migration failed: %w", err)
+		}
+
+		// Surface rows affected for the one-time legacy promote backfill so
+		// operators know how many corrupted rows were repaired on upgrade.
+		if strings.Contains(stmt, "promoted_to = substr") {
+			if n, _ := result.RowsAffected(); n > 0 {
+				fmt.Fprintf(os.Stderr, "toolbox-memory: backfilled %d legacy promoted entries (split value and promoted_to)\n", n)
+			}
 		}
 	}
 

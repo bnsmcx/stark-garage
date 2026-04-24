@@ -323,7 +323,11 @@ There's a `tasks/todo.md` fallback for projects without a GitHub remote, but the
 
 ### Memory System
 
-SQLite + FTS5 database that gets smarter over time. Every bug fix, every review finding, every estimation miss is recorded automatically.
+Three complementary stores, each with a narrow scope:
+
+- **Auto-memory flat files** (`~/.claude/projects/<slug>/memory/`) — user, feedback, project, and reference memories. System-prompt-native; Claude writes and reads these automatically.
+- **`.claude/lessons.md`** — project-scoped learned patterns with an in-file markdown lifecycle (`## Active` → `## Validated` → `## Promoted`, with archived entries moving into `.claude/lessons-archive.md`). Managed by `/pomo`.
+- **`toolbox-memory`** — SQLite + FTS5 store for agent-emitted signal only: `bug_pattern`, `spec_gap`, `calibration`, `routing`. Every bug fix and estimation miss is recorded automatically.
 
 ```bash
 # Build the CLI
@@ -336,12 +340,11 @@ toolbox-memory stats
 
 | Trigger | What's recorded |
 |---------|----------------|
-| Debugger fixes a bug | Bug class, root cause, prevention strategy |
-| Reviewer finds spec gap | What the spec should have included |
-| Builder completes a feature | Estimated vs actual hours |
-| `/pomo` runs after retries | Lesson (wrong approach, right approach, why) |
+| Debugger fixes a bug | Bug class, root cause, prevention strategy (`bug_pattern`) |
+| Reviewer finds spec gap | What the spec should have included (`spec_gap`) |
+| Builder completes a feature | Estimated vs actual hours (`calibration`) |
 
-Lessons follow a lifecycle: **Active** (new) → **Validated** (2+ hits) → **Promoted** (encoded into CLAUDE.md) → **Stale** (60 days no hits) → **Archived**.
+`toolbox-memory` entries follow a simpler lifecycle: **active** (on write) → **validated** (once `hit_count >= 2`, applied by `toolbox-memory prune`) → optionally **promoted** (explicit) → **stale** (60 days idle) → **archived** (30 days after stale). `/pomo` runs lessons.md; `/slim` runs `toolbox-memory prune`.
 
 ### Golden Set Lifecycle
 

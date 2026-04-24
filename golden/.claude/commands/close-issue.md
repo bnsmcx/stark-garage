@@ -109,13 +109,6 @@ Find all open issues with `- Blocked by: #NUMBER` in their body:
 
 Report: "Milestone: X/Y closed (Z%)"
 
-### 10. Memory Write
-
-Write resolution pattern to memory:
-```bash
-toolbox-memory write --ns lesson --agent close-issue --key "<scope>-<number>" --value '{"resolution":"<summary>","scope":"<scope>","criteria_count":N,"passed":N}'
-```
-
 ## Rules
 
 - NEVER close an issue with FAIL criteria

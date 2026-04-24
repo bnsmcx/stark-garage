@@ -49,7 +49,7 @@ func (d *DB) Store(namespace, agent, key, value string) (int64, error) {
 func (d *DB) Get(namespace, key string) (*MemoryEntry, error) {
 	row := d.sql.QueryRow(
 		`SELECT id, namespace, agent, key, value, confidence, hit_count,
-		        created_at, updated_at, expires_at, lifecycle
+		        created_at, updated_at, expires_at, lifecycle, promoted_to
 		 FROM memories
 		 WHERE namespace = ? AND key = ?`,
 		namespace, key,
@@ -63,13 +63,13 @@ func (d *DB) Get(namespace, key string) (*MemoryEntry, error) {
 		return nil, fmt.Errorf("get failed: %w", err)
 	}
 
-	// Increment hit_count and bump confidence slightly (capped at 1.0).
+	// Increment hit_count and updated_at. Confidence is intentionally not
+	// mutated on read — it's set at write (0.5) and promote (1.0) only.
 	now := time.Now().UTC().Format(time.RFC3339)
 	_, _ = d.sql.Exec(
 		`UPDATE memories
 		 SET hit_count = hit_count + 1,
-		     updated_at = ?,
-		     confidence = MIN(1.0, confidence + 0.05)
+		     updated_at = ?
 		 WHERE id = ?`,
 		now, entry.ID,
 	)
@@ -77,17 +77,40 @@ func (d *DB) Get(namespace, key string) (*MemoryEntry, error) {
 	return entry, nil
 }
 
+// Peek retrieves a single memory entry by namespace and key WITHOUT any side
+// effects: hit_count, updated_at, and confidence are untouched. Use this for
+// browsing or auditing; use Get for "I am consuming this entry" semantics.
+// Returns nil, ErrNotFound if no entry exists.
+func (d *DB) Peek(namespace, key string) (*MemoryEntry, error) {
+	row := d.sql.QueryRow(
+		`SELECT id, namespace, agent, key, value, confidence, hit_count,
+		        created_at, updated_at, expires_at, lifecycle, promoted_to
+		 FROM memories
+		 WHERE namespace = ? AND key = ?`,
+		namespace, key,
+	)
+
+	entry, err := scanEntry(row)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrNotFound
+		}
+		return nil, fmt.Errorf("peek failed: %w", err)
+	}
+	return entry, nil
+}
+
 // List returns all memory entries for the given namespace where lifecycle
-// is 'active' or 'validated', ordered by confidence DESC, hit_count DESC.
+// is 'active' or 'validated', ordered by hit_count DESC, updated_at DESC.
 // Returns an empty non-nil slice if none exist.
 func (d *DB) List(namespace string) ([]MemoryEntry, error) {
 	rows, err := d.sql.Query(
 		`SELECT id, namespace, agent, key, value, confidence, hit_count,
-		        created_at, updated_at, expires_at, lifecycle
+		        created_at, updated_at, expires_at, lifecycle, promoted_to
 		 FROM memories
 		 WHERE namespace = ?
 		   AND lifecycle IN ('active', 'validated')
-		 ORDER BY confidence DESC, hit_count DESC`,
+		 ORDER BY hit_count DESC, updated_at DESC`,
 		namespace,
 	)
 	if err != nil {
@@ -123,12 +146,12 @@ func (d *DB) Delete(namespace, key string) error {
 func scanEntry(row *sql.Row) (*MemoryEntry, error) {
 	var e MemoryEntry
 	var createdAt, updatedAt string
-	var expiresAt sql.NullString
+	var expiresAt, promotedTo sql.NullString
 
 	err := row.Scan(
 		&e.ID, &e.Namespace, &e.Agent, &e.Key, &e.Value,
 		&e.Confidence, &e.HitCount,
-		&createdAt, &updatedAt, &expiresAt, &e.Lifecycle,
+		&createdAt, &updatedAt, &expiresAt, &e.Lifecycle, &promotedTo,
 	)
 	if err != nil {
 		return nil, err
@@ -136,6 +159,10 @@ func scanEntry(row *sql.Row) (*MemoryEntry, error) {
 
 	if err := parseEntryTimes(&e, createdAt, updatedAt, expiresAt); err != nil {
 		return nil, err
+	}
+	if promotedTo.Valid {
+		s := promotedTo.String
+		e.PromotedTo = &s
 	}
 	return &e, nil
 }
@@ -144,12 +171,12 @@ func scanEntry(row *sql.Row) (*MemoryEntry, error) {
 func scanEntryFromRows(rows *sql.Rows) (*MemoryEntry, error) {
 	var e MemoryEntry
 	var createdAt, updatedAt string
-	var expiresAt sql.NullString
+	var expiresAt, promotedTo sql.NullString
 
 	err := rows.Scan(
 		&e.ID, &e.Namespace, &e.Agent, &e.Key, &e.Value,
 		&e.Confidence, &e.HitCount,
-		&createdAt, &updatedAt, &expiresAt, &e.Lifecycle,
+		&createdAt, &updatedAt, &expiresAt, &e.Lifecycle, &promotedTo,
 	)
 	if err != nil {
 		return nil, err
@@ -157,6 +184,10 @@ func scanEntryFromRows(rows *sql.Rows) (*MemoryEntry, error) {
 
 	if err := parseEntryTimes(&e, createdAt, updatedAt, expiresAt); err != nil {
 		return nil, err
+	}
+	if promotedTo.Valid {
+		s := promotedTo.String
+		e.PromotedTo = &s
 	}
 	return &e, nil
 }
