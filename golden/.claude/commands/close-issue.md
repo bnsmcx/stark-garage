@@ -24,6 +24,12 @@ When CLAUDE.md defines `tasks/todo.md`:
 
 ## Steps
 
+### 0. Mark Start
+
+```bash
+mkdir -p .claude/usage && printf '{"event":"iter_start","command":"close-issue","issue":NUMBER,"ts":"%s"}\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> .claude/usage/iterations.jsonl
+```
+
 ### 1. Fetch Issue
 
 Fetch via `gh issue view NUMBER --json number,title,body,labels,milestone,assignees`.
@@ -108,6 +114,12 @@ Find all open issues with `- Blocked by: #NUMBER` in their body:
 ### 9. Milestone Progress
 
 Report: "Milestone: X/Y closed (Z%)"
+
+### 10. Mark End
+
+```bash
+printf '{"event":"iter_end","command":"close-issue","issue":NUMBER,"ts":"%s"}\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> .claude/usage/iterations.jsonl
+```
 
 ## Rules
 

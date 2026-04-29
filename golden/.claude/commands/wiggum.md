@@ -129,6 +129,12 @@ grep -ri "<issue scope>" .claude/lessons.md
 
 ### 4. Planner Enrichment
 
+Mark iteration start so the per-issue cost can be computed by `/usage-report`:
+
+```bash
+mkdir -p .claude/usage && printf '{"event":"iter_start","command":"wiggum","issue":NN,"ts":"%s"}\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> .claude/usage/iterations.jsonl
+```
+
 Invoke the Planner agent to enrich the issue with specs:
 
 > Use planner. Enrich issue #NN with implementation specs. Read the state file at .claude/project-state.md for codebase context.
@@ -208,6 +214,16 @@ git checkout release/RELEASE_NAME && git pull
 ```
 
 Update release PR checklist: replace `- [ ] #NN` with `- [x] #NN`.
+
+### 12b. Mark Iteration End
+
+Record what this iteration cost by tagging an end marker. Fields capture the
+levers most likely to dominate token use, so `/usage-report` can show whether
+deep review or fix loops are the heavy hitters per issue.
+
+```bash
+printf '{"event":"iter_end","command":"wiggum","issue":NN,"ts":"%s","deep_review":<true|false>,"agents":[<agents invoked this iter>],"fix_iterations":<0..3>,"validation_retries":<0..3>}\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> .claude/usage/iterations.jsonl
+```
 
 ### 13. Context Refresh
 

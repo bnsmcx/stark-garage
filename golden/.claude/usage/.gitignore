@@ -1,0 +1,4 @@
+# Captured token usage (session-local, not shared)
+messages.jsonl
+iterations.jsonl
+.cursor-*
