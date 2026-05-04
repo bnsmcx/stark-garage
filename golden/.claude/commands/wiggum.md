@@ -167,15 +167,23 @@ Run validation command. Same retry logic as ad-hoc mode (max 3 attempts). If 2+ 
 
 ### 8. Deep Review (complexity-gated)
 
-**Complexity check:** Count lines changed and files touched in the current branch vs release branch.
-- If **<50 lines changed AND <3 files touched**: skip per-issue deep review, proceed to Step 10.
-- Otherwise: launch parallel review agents:
+**Tier the review by diff size and surface.** Count lines changed and files touched in the current branch vs release branch. Detect "high-stakes surfaces" by grep for changes under: auth/middleware paths, schema/migration files, anything labelled `security` / `migration` / `destructive` on the issue, code paths the project flags as privileged (e.g. active-response, payment, RBAC).
 
+| Tier | Trigger | Action |
+|---|---|---|
+| **Skip** | <50 lines AND <3 files | Proceed to Step 10. |
+| **Combined** | 50–300 lines AND no high-stakes surface | One reviewer agent with a `[SPEC] [SECURITY] [OPS]`-sectioned prompt. Sequential. Cheaper. |
+| **Parallel three** | >300 lines OR any high-stakes surface OR any reviewer returned NEEDS_FIXES on a prior iteration | Three parallel agents (current behavior). Maximum rigor. |
+
+**Combined-tier prompt template:**
+> Use reviewer. Review the PR for issue #NN against the spec in the issue body. Produce three sections in order — `[SPEC]` (acceptance criteria, architecture, holistic update), `[SECURITY]` (OWASP, secrets, injection, auth surface), `[OPS]` (logging, error wrapping, context plumbing, test coverage of failure modes). Each section gets a verdict (APPROVED/NEEDS_FIXES, SECURE/VULNERABLE, READY/NOT_READY). Do not skip sections under context pressure.
+
+**Parallel-three prompts:**
 > Use reviewer. Review the PR for issue #NN against the spec in the issue body.
 > Use security-reviewer. Security scan the PR for issue #NN.
 > Use ops-reviewer. Observability audit the PR for issue #NN.
 
-All three run in parallel. Aggregate verdicts.
+Aggregate verdicts. For combined: any non-pass section blocks. For parallel: any non-pass agent blocks.
 
 ### 9. Fix Loop
 
