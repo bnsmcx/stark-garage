@@ -1,5 +1,23 @@
 # Changelog
 
+## 2026-05-04 — /improve-golden-set from muskrat-v2 (v2.11.0 release loop)
+
+### Changed
+- `/wiggum` Step 8 (Deep Review): replaced the binary skip-or-three-parallel gate with a three-tier table (Skip / Combined / Parallel three). New "Combined" tier handles 50–300-line non-high-stakes diffs with one sectioned reviewer agent (`[SPEC] [SECURITY] [OPS]`); roughly 30–40% cheaper in tokens than the parallel-three pipeline. The high-stakes-surface trigger keeps full rigor on auth, schema, migrations, and project-flagged privileged paths.
+- `/review-pr` Deep Review Escalation: same three-tier table aligned with `/wiggum`. Adds an explicit escalation rule — if a combined-tier review surfaces concerning ambiguity in a domain it didn't fully cover, escalate to parallel-three rather than approving.
+
+### Why
+The v2.11.0 release loop ran 27 deep-review invocations (8 PRs × 3 reviewers + 1 release-level × 3). Many PRs were 100–300 lines / non-destructive; the parallel-three pipeline burned ~30% more tokens than necessary on those. The new Combined tier captures most of the structural value (sectioned coverage forces the agent to address each domain) at single-agent cost. Parallel-three remains the default for high-stakes surfaces and `--deep`.
+
+### Budget impact
+- Commands: wiggum.md 267 → 275 lines (well under 300 budget); review-pr.md 147 → 156 lines.
+- CLAUDE.md, agent_docs/, .mcp.json: unchanged.
+
+### Skipped (reviewed but not extracted)
+- Lessons from `.claude/lessons.md` (artifact-size verification, ffmpeg banner suppression) — project-local lessons, not general enough to belong in the golden set.
+- Memory entry `feedback_wiggum_no_mid_loop_pause.md` — already implied by `feedback_wiggum_autonomous_completion.md`; no new extraction needed.
+- Two LOW follow-up items (TLS-skip log key parity; AR audit-log caller provenance) — muskrat-specific.
+
 ## 2026-04-21 — /improve-golden-set from chartcruises v0.17.0 → v0.18.0
 
 ### Changed

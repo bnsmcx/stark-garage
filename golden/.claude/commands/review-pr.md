@@ -18,16 +18,25 @@ Consistent, repeatable PR review. Same checks, same order, structured verdict.
 
 ## Deep Review Escalation
 
-When `--deep` is passed, OR the PR targets `main`/`release/*`, OR the diff touches auth/security middleware or database migrations:
+Tier the review by diff size and surface. Count lines changed and files touched; check whether the diff hits any high-stakes surface (auth/middleware, schema/migration, anything labelled `security` / `migration` / `destructive` on the issue, code paths the project flags as privileged).
 
-Launch 3 parallel review agents:
+| Tier | Trigger | Action |
+|---|---|---|
+| **Standard 7-section** | <50 lines AND <3 files AND no high-stakes surface | Run the inline review below. No agents. |
+| **Combined deep** | 50–300 lines, no high-stakes surface, no `--deep` flag | One reviewer agent with `[SPEC] [SECURITY] [OPS]` sections. Sequential. ~30–40% cheaper than parallel-three. |
+| **Parallel three** | `--deep` passed, OR PR targets `main`/`release/*`, OR >300 lines, OR any high-stakes surface | Three parallel agents (reviewer + security-reviewer + ops-reviewer). Maximum rigor; parallel wall-clock. |
+
+**Combined-tier prompt:**
+> Use reviewer. Review PR #NN against the spec in the linked issue. Produce three sections in order — `[SPEC]` (acceptance criteria, architecture, holistic update), `[SECURITY]` (OWASP, secrets, injection, auth surface), `[OPS]` (logging, error wrapping, context plumbing, test coverage of failure modes). Each section gets a verdict (APPROVED/NEEDS_FIXES, SECURE/VULNERABLE, READY/NOT_READY). Do not skip sections under context pressure.
+
+**Parallel-three prompts:**
 > Use reviewer. Review PR #NN against the spec in the linked issue.
 > Use security-reviewer. Full security scan of PR #NN.
 > Use ops-reviewer. Observability audit of PR #NN.
 
-Wait for all 3 to complete. Aggregate verdicts — all must pass for APPROVE.
+For combined: any non-pass section blocks. For parallel-three: wait for all three; any non-pass agent blocks. If a combined-tier review surfaces concerning ambiguity (e.g. partial findings in a domain it didn't have time for), escalate to parallel-three rather than approving.
 
-Otherwise, proceed with the standard 7-section review below.
+If none of the tier triggers fire, proceed with the standard 7-section review below.
 
 ---
 
