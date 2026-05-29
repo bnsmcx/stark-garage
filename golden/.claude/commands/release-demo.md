@@ -6,7 +6,9 @@ user_invocable: true
 
 # /release-demo — Interactive Release Demo HTML
 
-Generate a self-contained interactive HTML page that walks every change in a release as a **live API round-trip**. The page is committed alongside the source, embedded into the binary (e.g. via `go:embed` in `internal/demo/`), and served at a dev route (e.g. `GET /demo/{filename}`) when the app runs in dev mode. The same file opens as a standalone document via `file://` for emailing.
+Generate a self-contained interactive HTML page that walks every change in a release as a **live API round-trip**. The page is committed alongside the source, embedded into the binary, and served at a dev route (e.g. `GET /demo/{filename}`) when the app runs in dev mode. The same file opens as a standalone document via `file://` for emailing.
+
+This command refers to the project's embed directory as `{demo-dir}` — substitute your stack's convention (e.g. `internal/demo/` for a `go:embed` setup). Bootstrap tailors these placeholders to the project.
 
 This supersedes the old shell-script + recorded-GIF flow. We no longer generate E2E shell scripts, `.tape` files, or upload demo GIFs to releases — reviewers want to *click endpoints* and *see request/response*, not watch a terminal recording.
 
@@ -35,7 +37,7 @@ gh issue list --milestone "MILESTONE" --state closed --limit 200 --json number,t
 ### 2. Copy Scaffolding From the Most Recent Demo
 
 ```bash
-ls -t internal/demo/release-*.html | head -1   # or wherever demos live
+ls -t {demo-dir}/release-*.html | head -1
 ```
 
 Copy the inline CSS, the inline JS scaffolding (state object, `http()` / `httpOnce()` with 401-retry, `formatRequest()`, `bootstrap()`, `runAll()`, `resetAll()`, verdict pill helpers, the tab framework `activateTab()` + `renderMermaidIn()`, and mermaid wiring), and the overall page skeleton **verbatim**. Only the per-release content (frontmatter values, tab content, per-issue sections, `RUNNERS` map, `STEP_ORDER`) changes. **Do not re-derive the scaffolding** — it has been audited for:
@@ -55,7 +57,7 @@ curl -s "$BASE/swagger/doc.json" | jq '.paths["/api/ENDPOINT"]'
 
 Use the spec — not memory — for the request shape, query parameters, and response field names. Pass the raw spec to subagents if you need them to do bulk jq queries.
 
-### 4. Write `internal/demo/release-{version}.html`
+### 4. Write `{demo-dir}/release-{version}.html`
 
 The page serves **four audiences** — a manager/QC reader skimming what shipped, a frontend dev checking what they must change, an ops engineer wiring up config, and a reviewer who wants to click endpoints. Split it into **navigation tabs** so each audience lands on their content without scrolling past everyone else's. Copy the tab framework from the previous demo; only the panel content changes.
 
@@ -96,7 +98,7 @@ The demo HTML is embedded into the binary, so iterating on it has two modes — 
 # Fast HTML iteration: open the file directly, no rebuild. The on-disk
 # edits are reflected immediately; defaultApiBase() falls back to the
 # running API. Use this while writing runners/markup.
-#   file:///abs/path/internal/demo/release-{version}.html
+#   file:///abs/path/{demo-dir}/release-{version}.html
 #
 # Embedded validation (the real gate): rebuild from branch source so the
 # served copy matches what ships. A published-image run will NOT contain
@@ -121,7 +123,7 @@ Re-run until every step is `pass` or a knowing `skip`.
 ### 6. Commit
 
 ```bash
-git add internal/demo/release-{version}.html
+git add {demo-dir}/release-{version}.html
 git commit -m "docs(demo): add interactive release demo for {version}"
 git push
 ```

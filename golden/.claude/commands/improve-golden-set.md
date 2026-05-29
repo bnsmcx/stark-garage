@@ -142,18 +142,21 @@ For each approved item:
 ```markdown
 ## [Date] — /improve-golden-set from [project-name]
 
-### Added
-- [file or section added] (Level N) — [source description]
+### Added / Changed / Removed
+- Use the heading(s) that apply. **Added** for new files/sections, **Changed**
+  for rewrites or restructures of existing ones, **Removed** for deletions.
+- [file or section] (Level N) — [what changed and source description]
 
 ### Moved
 - [content]: [old location] -> [new location] (Level N -> Level M)
 
-### Removed
-- [content removed] — [reason]
+### Why
+- Optional. Include when the rationale isn't self-evident — e.g. the real-world
+  use that proved the change out, or a gotcha worth recording.
 
 ### Budget impact
-- CLAUDE.md baseline: NN/60 lines -> NN/60 lines (+/-N)
-- agent_docs/ files: N -> N (+/-N)
+- One line per budgeted file touched, as `NN -> NN lines` against its `BUDGETS.md` limit.
+- e.g. CLAUDE.md baseline: NN/60 -> NN/60 (+/-N); command files: NN/300 -> NN/300.
 ```
 
 Do NOT commit. Let the user review and commit manually.
