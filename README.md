@@ -4,6 +4,31 @@ An agentic engineering toolbox for Claude Code. 15 slash commands, 7 specialized
 
 **GitHub Issues are the backbone.** Every piece of work is a GitHub issue. Specs live in issue bodies. Dependencies are tracked in issue bodies. Milestones scope releases. The `gh` CLI drives everything.
 
+## Quick Start
+
+```bash
+# Deploy to any project
+./golden/deploy.sh /path/to/your/project
+
+# Then open Claude Code in that project
+cd /path/to/your/project
+claude
+
+# Scan the project and adapt configuration
+> /bootstrap
+
+# Pick up a GitHub issue and fix it:
+> /wiggum 53
+
+# Or run the full loop:
+> /investigate add user authentication
+> /create-issues me
+> /setup-release enhancement
+> /wiggum
+```
+
+---
+
 ## The Core Dev Loop
 
 Five commands do most of the work. The loop runs: **investigate → create-issues → setup-release → wiggum → review-pr**.
@@ -273,31 +298,6 @@ Auto-triggered for any browser interaction — navigating pages, filling forms, 
 | **Chrome DevTools MCP** | Console debugging, network inspection, Web Vitals |
 
 Core workflow: `navigate → snapshot → interact → re-snapshot`. Without this, agents generate frontend code blind.
-
----
-
-## Quick Start
-
-```bash
-# Deploy to any project
-./golden/deploy.sh /path/to/your/project
-
-# Then open Claude Code in that project
-cd /path/to/your/project
-claude
-
-# Scan the project and adapt configuration
-> /bootstrap
-
-# Pick up a GitHub issue and fix it:
-> /wiggum 53
-
-# Or run the full loop:
-> /investigate add user authentication
-> /create-issues me
-> /setup-release enhancement
-> /wiggum
-```
 
 ---
 
