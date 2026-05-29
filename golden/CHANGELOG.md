@@ -1,5 +1,22 @@
 # Changelog
 
+## 2026-05-27 — /improve-golden-set from Athena v2 services-0.17.0
+
+### Changed
+- `/release-demo`: full rewrite. Replaces the shell-E2E-script + recorded-GIF flow with a self-contained **interactive HTML page** committed to the repo, embedded into the binary, and served at a dev route — reviewers click endpoints and see live request/response instead of watching a terminal recording. Adds: a **four-tab layout** (Overview / Demo / Frontend Changes / DevOps Info), one audience per tab; **curl-formatted request previews with a copy button**; **lazy per-tab mermaid rendering** (`startOnLoad:false` + render-on-tab-activation) with the load-bearing gotcha that diagrams drawn in hidden/zero-size panels render as a "Syntax error" bomb even when the source parses; a **host-aware signed/redirect-URL rewrite** (derive host from the connection-panel API base, never hardcode `localhost`) so the demo works from a remote machine; and two documented validation modes (`file://` fast-iteration vs from-source embedded gate).
+- `/release-notes`: restructured from a narrative "What's New" into an **inverted pyramid** — frontend-impact-first (breaking → new → changed → behaviour, with a mandatory `Frontend action` column), then backend / deps / risk / verification, with implementation progress + follow-ups below the fold in `<details>`. A frontend dev reads only the first section to know what (if anything) to change.
+- `/improve-golden-set`: documented the changelog template to match real usage — `Added / Changed / Removed` headings, an optional `Why` section, and a per-budgeted-file `Budget impact` block keyed on `BUDGETS.md` limits (was `Added / Moved / Removed` only, with a CLAUDE.md-only budget block).
+
+### Why
+Both commands' previous golden form predated heavy real-world use. The HTML demo proved far more reviewable than GIFs across a multi-issue release; the inverted-pyramid notes let a frontend reader act from the first screen. The mermaid and host-rewrite gotchas each cost a real debugging cycle — capturing them here saves the next project from rediscovering them.
+
+### Budget impact
+- Commands: release-demo.md 163 → 178 lines; release-notes.md 193 → 263 lines; improve-golden-set.md 231 → 234 lines (all under the 300 budget).
+- CLAUDE.md, agent_docs/, .mcp.json: unchanged.
+
+### Follow-ups (not applied here)
+- Reconsider re-adding `toolbox-memory` (the SQLite+FTS5 memory layer) and reconcile it against the `grep lessons.md` drift — tracked in #27. Not included in this changeset.
+
 ## 2026-05-04 — /improve-golden-set from muskrat-v2 (v2.11.0 release loop)
 
 ### Changed
