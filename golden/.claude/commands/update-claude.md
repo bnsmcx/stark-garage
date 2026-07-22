@@ -105,9 +105,25 @@ Compare `golden/BUDGETS.md` against the project's `BUDGETS.md`:
 
 Similarly, compare `golden/CHANGELOG.md` against the project's `CHANGELOG.md`.
 
-### 8. Check for removed golden items
+### 8. Check for removed golden items — read the CHANGELOG
 
-Check for files in the project's `.claude/commands/` or `.claude/agents/` that match golden set naming patterns but no longer exist in the golden set.
+Removals matter as much as additions, and the risky ones are invisible to a file-existence check:
+when a golden update deletes *content or references inside* files (a retired CLI, a dropped config
+key, an abandoned mechanism), a deployed project keeps the stale content indefinitely unless someone
+notices. The golden `CHANGELOG.md` is the authoritative record of what was removed or restructured.
+
+1. **Read `golden/CHANGELOG.md`.** Using the project's `CHANGELOG.md` from Step 7b, identify the
+   entries the project has **not yet synced** (everything newer than the project's latest entry).
+   If the project has no `CHANGELOG.md`, review the most recent golden entries instead.
+2. **Extract concrete removals** from each unsynced entry's **Removed** and **Changed** sections:
+   deleted files/dirs, deleted commands/agents, and removed *references* (CLIs, config keys, file
+   paths, prerequisites, permissions).
+3. **Check the project for each one:**
+   - **Deleted file / command / agent** still present locally → flag for removal.
+   - **Removed reference** → `grep` the project's `CLAUDE.md`, `.claude/`, and `agent_docs/` for the
+     identifier; any live match is stale content to clean up (report file:line).
+4. **File-existence sweep:** also flag files in the project's `.claude/commands/` or `.claude/agents/`
+   that match golden naming patterns but no longer exist in the golden set.
 
 Skip user-authored project-specific commands (any command not in the golden set).
 
@@ -129,7 +145,7 @@ Group findings by type and present each change individually:
   - **(a) Accept golden** — overwrite local with golden version
   - **(b) Keep local** — keep the project's version
   - **(c) Push local to golden** — the project's version is better, push it upstream via `/improve-golden-set`
-- **Removed from golden:** Flag for awareness. Default: remove.
+- **Removed from golden (from Step 8):** Both deleted files and stale in-file references (from the CHANGELOG). Flag each for awareness with file:line. Default: remove file / clean up reference.
 
 Wait for user approval before proceeding.
 
