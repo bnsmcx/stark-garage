@@ -105,9 +105,17 @@ Write to `.claude/reviews/REVIEW-{NNN}.md`:
 
 ### 7. Memory Write
 
-If the spec missed something that the review caught:
-```bash
-toolbox-memory write --ns spec_gap --agent reviewer --key "<feature-type>-<area>" --value '{"gap":"<what spec missed>","found_in":"review","severity":"<level>"}'
+If the spec missed something that the review caught, save a native memory file (plus a `MEMORY.md` pointer):
+```markdown
+---
+name: spec-gap-<feature-type>-<area>
+description: spec gap for <feature-type> / <area> — caught in review
+metadata:
+  type: reference
+---
+
+- **Gap:** <what spec missed>
+- **Found in:** review · **Severity:** <level>
 ```
 
 ## Verdict Rules

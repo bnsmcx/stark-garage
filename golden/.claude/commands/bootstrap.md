@@ -223,15 +223,11 @@ For non-GitHub trackers (Jira, Linear, GitLab): update `agent_docs/issue-tracker
 
 If in-repo task file selected: create `tasks/todo.md`, modify CLAUDE.md references.
 
-### 3.11 Initialize Memory Database
+### 3.11 Memory
 
-Initialize the toolbox memory system:
-
-```bash
-toolbox-memory init
-```
-
-If the `toolbox-memory` CLI is not available, create an empty memory database placeholder. This enables `/slim` memory pruning and cross-session knowledge retention.
+No setup required. Self-improvement lessons and cross-session knowledge persist in the harness-native
+memory system (`MEMORY.md` index + one file per fact), which Claude Code manages automatically. See
+`agent_docs/self-improvement.md` for the format agents use.
 
 ### 3.12 Post-bootstrap budget check
 
@@ -252,7 +248,7 @@ If the `toolbox-memory` CLI is not available, create an empty memory database pl
 - Commands created: [list]
 - Code reviewer: Augmented with [project-type] checks
 - MCP servers: Playwright MCP, Chrome DevTools MCP [+ others]
-- Memory database: Initialized
+- Memory: harness-native (no setup required)
 - [.gitignore updated / docs/ scaffold / hooks — if applicable]
 
 ### What's Configured:

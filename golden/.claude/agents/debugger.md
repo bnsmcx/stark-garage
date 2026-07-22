@@ -19,11 +19,9 @@ Auto-invoked by `/wiggum` release mode when reviewers return NEEDS_FIXES. Also a
 
 ### 1. Memory-First Check
 
-Before scanning code, check memory for existing bug patterns:
-
-```bash
-toolbox-memory search --ns bug_pattern --query "<error message keywords>"
-```
+Before scanning code, check native memory for existing bug patterns. The harness surfaces relevant
+memories automatically at session start — scan `MEMORY.md` and the recalled facts for entries whose
+description matches the error keywords (look for `bug-pattern-*` facts).
 
 If relevant patterns found:
 - Try the highest-confidence fix first
@@ -75,12 +73,22 @@ Every fix MUST include a regression test:
 
 ### 6. Record Pattern to Memory
 
-**Automatic** — this is not optional. After every successful fix:
+**Automatic** — this is not optional. After every successful fix, save a native memory file (one
+fact per file) so future sessions recall it, and add a one-line pointer to `MEMORY.md`:
 
-```bash
-toolbox-memory write --ns bug_pattern --agent debugger \
-  --key "<bug-class>-<component>" \
-  --value '{"class":"<bug class>","symptom":"<what was observed>","root_cause":"<actual defect>","prevention":"<how to avoid in specs>","fix_approach":"<what worked>","component":"<affected component>"}'
+```markdown
+---
+name: bug-pattern-<bug-class>-<component>
+description: <bug class> in <component> — <symptom keywords for recall>
+metadata:
+  type: reference
+---
+
+- **Class:** <bug class>
+- **Symptom:** <what was observed>
+- **Root cause:** <actual defect>
+- **Fix approach:** <what worked>
+- **Prevention:** <how to avoid in specs>
 ```
 
 Bug class examples:

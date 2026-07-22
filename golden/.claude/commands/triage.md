@@ -10,11 +10,9 @@ Analyze all open issues, build a dependency graph, and produce an actionable sum
 
 ## Startup
 
-Query memory for relevant lessons before beginning:
-```bash
-grep -iE "triage|dependency|blocked" .claude/lessons.md
-```
-Apply any returned lessons to the analysis below.
+Consult native memory for relevant lessons before beginning: scan the auto-recalled memories and
+`MEMORY.md` for entries about triage / dependencies / blocked issues. Apply any that are relevant to
+the analysis below.
 
 ## Task Tracking Mode
 

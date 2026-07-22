@@ -6,14 +6,14 @@ user_invocable: true
 
 # /slim — Golden Set Audit & Compression
 
-Audit CLAUDE.md, agent_docs/, and the memory database for bloat, redundancy, and stale content. Compress or remove content to stay within budget limits.
+Audit CLAUDE.md, agent_docs/, and native memory for bloat, redundancy, and stale content. Compress or remove content to stay within budget limits.
 
 ## When to run
 
 - After every 5th `/improve-golden-set` cycle
 - When any file reaches 80% of its budget (flagged by `/improve-golden-set` Step 11)
 - On user request
-- When memory utilization seems high or entries appear stale
+- When native memory accumulates stale or superseded facts
 
 ## Steps
 
@@ -31,7 +31,6 @@ Count lines and instructions for every file listed in `BUDGETS.md`. Report curre
 | agent_docs/issue-conventions.md | NN | 120 | NN% | — | — | — |
 | agent_docs/issue-tracker-ops.md | NN | 120 | NN% | — | — | — |
 | agent_docs/self-improvement.md | NN | 120 | NN% | — | — | — |
-| .claude/lessons.md | NN entries | 40 | NN% | — | — | — |
 | settings.local.json (allow) | NN entries | 100 | NN% | — | — | — |
 ```
 
@@ -47,55 +46,19 @@ For each instruction in CLAUDE.md, check:
 
 Flag duplicates and trained-in behaviors for removal. Present evidence for each flag.
 
-### 3. Lessons.md pruning
+### 3. Native memory pruning
 
-Read `.claude/lessons.md` and evaluate each entry:
+Scan `MEMORY.md` (and the auto-recalled memories) and evaluate each fact:
 
-- **Promoted:** Encoded into a CLAUDE.md instruction or command rule? Flag for removal (note: "Promoted to [location]")
-- **Project-specific:** Specific to one project rather than universal? Keep in project but don't extract to golden
-- **Mergeable:** 2+ lessons expressing the same principle? Flag for merge
-- **Stale:** No matching incidents in recent project context? Flag for archival to `.claude/lessons-archive.md`
+- **Promoted:** already encoded into a CLAUDE.md instruction or command rule? Flag the memory file for deletion (note: "Promoted to [location]").
+- **Stale/superseded:** no longer accurate, or overtaken by a code/convention change? Flag for deletion.
+- **Mergeable:** 2+ facts expressing the same principle? Flag to merge into one file.
+- **Wrong:** contradicted by how the code actually behaves? Flag for deletion.
 
-### 4. Memory pruning
+Native memory is harness-managed (no entry cap or lifecycle states to enforce) — pruning here just
+means deleting obsolete facts and their `MEMORY.md` pointers. Report a count of memories flagged.
 
-Run memory lifecycle transitions to keep the database lean:
-
-```bash
-toolbox-memory prune
-```
-
-This transitions entries through lifecycle states:
-- **Active entries with no hits in 60 days** transition to **stale**
-- **Stale entries with no hits for 30 more days** transition to **archived**
-
-If `toolbox-memory` is not available, skip this step and note it in the report.
-
-After pruning, query memory utilization:
-
-```bash
-toolbox-memory stats
-```
-
-Report memory state:
-
-```
-## Memory Utilization
-
-| Lifecycle State | Count |
-|----------------|-------|
-| Active | NN |
-| Validated | NN |
-| Promoted | NN |
-| Stale | NN |
-| Archived | NN |
-| **Total** | **NN** |
-
-Pruning actions taken:
-- N entries transitioned: active -> stale (no hits in 60+ days)
-- N entries transitioned: stale -> archived (no hits in 90+ days)
-```
-
-### 5. Reference data audit
+### 4. Reference data audit
 
 For each file in `agent_docs/`:
 
@@ -103,7 +66,7 @@ For each file in `agent_docs/`:
 - **Referenced:** Is it referenced by at least one command? (Dead references: flag for removal)
 - **Current:** Has the format or tooling changed since this was written?
 
-### 6. Present findings
+### 5. Present findings
 
 Group all findings into categories:
 
@@ -114,15 +77,14 @@ Group all findings into categories:
 - [item] — [reason: redundant with command X / trained-in / promoted]
 
 ### Merge (N items)
-- [lesson A] + [lesson B] -> [merged version]
+- [item A] + [item B] -> [merged version]
 
 ### Compress (N items)
 - [item]: current NN lines -> proposed NN lines
   [show compressed version]
 
-### Memory Pruned (N entries)
-- N active -> stale
-- N stale -> archived
+### Memory Pruned (N facts)
+- [memory file] — [reason: promoted / stale / wrong / merged]
 
 ### Keep (N items)
 - [item] — [reason it's still valuable]
@@ -130,17 +92,15 @@ Group all findings into categories:
 
 Wait for user approval before applying any changes.
 
-### 7. Apply approved changes
+### 6. Apply approved changes
 
 For each approved change:
-- Remove flagged content from CLAUDE.md, lessons.md, or agent_docs/
-- Merge lessons as approved
+- Remove flagged content from CLAUDE.md or agent_docs/
+- Merge as approved
 - Apply compressed versions
-- Move stale lessons to `.claude/lessons-archive.md`
+- Delete flagged native-memory facts and their `MEMORY.md` pointers
 
-Memory pruning (Step 4) is applied automatically since it only transitions lifecycle states — it does not delete data.
-
-### 8. Post-audit measurement
+### 7. Post-audit measurement
 
 Re-measure all budgeted files and report before/after:
 
@@ -150,13 +110,12 @@ Re-measure all budgeted files and report before/after:
 | File | Before | After | Change |
 |------|--------|-------|--------|
 | CLAUDE.md baseline | NN/60 (NN%) | NN/60 (NN%) | -N lines |
-| lessons.md | NN/40 entries | NN/40 entries | -N entries |
-| Memory (active) | NN | NN | -N entries |
-| Memory (total) | NN | NN | -N entries (archived) |
+| agent_docs/self-improvement.md | NN | NN | -N lines |
+| Native memory (facts) | NN | NN | -N facts |
 | ... | ... | ... | ... |
 ```
 
-### 9. Changelog entry
+### 8. Changelog entry
 
 Append an entry to `golden/CHANGELOG.md`:
 
@@ -167,19 +126,17 @@ Append an entry to `golden/CHANGELOG.md`:
 - [items removed with reasons]
 
 ### Merged
-- [lessons merged]
+- [items merged]
 
 ### Compressed
 - [items compressed]
 
 ### Memory Pruned
-- N entries: active -> stale
-- N entries: stale -> archived
+- N native-memory facts deleted (promoted / stale / wrong)
 
 ### Budget impact
 - CLAUDE.md baseline: NN/60 -> NN/60 lines (-N)
-- lessons.md: NN/40 -> NN/40 entries (-N)
-- Memory active: NN -> NN (-N)
+- Native memory: NN -> NN facts (-N)
 ```
 
 ## Rules

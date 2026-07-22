@@ -6,7 +6,8 @@ user_invocable: true
 
 # /pomo — Post-Mortem
 
-Reflect on a recently resolved issue, capture generalizable lessons, persist to lessons.md and SQLite memory.
+Reflect on a recently resolved issue, capture generalizable lessons, and persist them to the
+harness-native memory system (`MEMORY.md` + one file per fact).
 
 ## Invocation
 
@@ -43,53 +44,50 @@ If skipping, tell user why and stop.
 
 ### 3. Check for Duplicates
 
-```bash
-grep -ri "<pattern keywords>" .claude/lessons.md .claude/lessons-archive.md
-```
+Scan `MEMORY.md` (and the auto-recalled memories) for an existing fact covering this pattern.
 
-If duplicate found:
-- **Same pattern:** Update existing lesson, increment incident count in place
-- **Related but distinct:** Create new lesson, cross-reference
+If a match is found:
+- **Same pattern:** update the existing memory file — sharpen the fact and note the recurrence.
+- **Related but distinct:** create a new file and cross-link with `[[name]]`.
 
-### 3b. Lifecycle Management
+### 3b. Prune
 
-`.claude/lessons.md` is organized into four sections: `## Active`, `## Validated`, `## Promoted`, and a pointer to `.claude/lessons-archive.md`. Before writing a new lesson, scan for pruning candidates:
-
-1. **Stale `## Active` entries** (no matching incident in 60+ days) → move to `.claude/lessons-archive.md` under the archival date
-2. **`## Active` entries with a second matching incident** → move to `## Validated`
-3. **Lessons already encoded in CLAUDE.md or a command** → move content out; leave a one-line stub under `## Promoted` pointing to the CLAUDE.md section
-
-Report: "Pruned N lessons. Active: NN/40."
+While reviewing memory, delete any facts that have turned out to be wrong or obsolete, and remove
+their `MEMORY.md` pointers. (Native memory is otherwise harness-managed — no section machinery or
+entry cap to enforce.) Report: "Pruned N stale/wrong memories."
 
 ### 4. Write Lesson
 
-Add to the `## Active` section of `.claude/lessons.md` per `agent_docs/self-improvement.md` format:
+Create a native memory file per the `agent_docs/self-improvement.md` format (most lessons are
+`type: feedback`), then add a one-line pointer to `MEMORY.md`:
 
 ```markdown
-### [Pattern name]
-- **Wrong:** [what was done incorrectly]
-- **Right:** [the correct approach]
-- **Why:** [root cause or reasoning]
-```
+---
+name: <short-kebab-case-slug>
+description: <one-line summary for recall>
+metadata:
+  type: feedback
+---
 
-**Lifecycle transitions (all markdown edits — no CLI calls):**
-- New lessons → append under `## Active`
-- 2nd+ matching incident → update existing, move to `## Validated`
-- 3+ incidents → propose promotion (Step 5)
+<the lesson.>
+**Why:** <root cause or reasoning>
+**How to apply:** <the corrected approach, generalized>
+```
 
 ### 5. Promotion Check
 
-Scan `## Validated` for entries with 3+ confirmed incidents. For each:
+If a pattern has recurred **3+ times** (its memory file notes multiple incidents), propose promoting
+it into a permanent rule:
 
-1. Propose promoting to a CLAUDE.md section or command rule. Ask user before modifying CLAUDE.md.
-2. On approval: move the entry's content into the target CLAUDE.md section, and leave a one-line stub under `## Promoted` in `.claude/lessons.md` of the form `- [Pattern name] → CLAUDE.md [section]`.
+1. Propose promoting to a CLAUDE.md section or command rule. Ask the user before modifying CLAUDE.md.
+2. On approval: add the rule to the target CLAUDE.md section and **delete** the now-redundant memory
+   file (CLAUDE.md becomes the single source of truth for that rule).
 
 ### 6. Summarize
 
 Tell user:
 - What lesson was captured (or why none was needed)
-- Which files updated (lessons.md, archive, CLAUDE.md)
-- Whether CLAUDE.md was modified
+- Which memory files were written/updated/pruned, and whether CLAUDE.md was modified
 - Promotion candidates (if any)
 
 ## Rules

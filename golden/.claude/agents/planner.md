@@ -17,7 +17,7 @@ If `.claude/agents/extensions/planner.md` exists, read it at startup. Instructio
 
 1. **Issue number** — the GitHub issue to enrich
 2. **State file** — `.claude/project-state.md` + `.claude/state/*.md` for codebase context
-3. **Memory** — bug patterns, spec gaps, calibration data from `toolbox-memory`
+3. **Memory** — bug patterns, spec gaps, calibration data from native memory (`MEMORY.md` + recalled facts)
 
 ## Process
 
@@ -29,12 +29,11 @@ cat .claude/project-state.md
 
 # Read the issue
 gh issue view NUMBER --json number,title,body,labels
-
-# Query memory for relevant patterns
-toolbox-memory search --ns bug_pattern --query "<feature area>"
-toolbox-memory search --ns spec_gap --query "<feature type>"
-toolbox-memory search --ns calibration --query "<feature type>"
 ```
+
+Consult native memory for relevant patterns — the harness surfaces memories automatically at session
+start; scan `MEMORY.md` (and recalled facts) for `bug-pattern-*`, `spec-gap-*`, and `calibration-*`
+entries whose description matches this feature area/type.
 
 ### 2. Analyze Requirements
 
@@ -95,12 +94,18 @@ $SPEC_SECTIONS"
 
 ### 5. Write to Memory
 
-If this spec reveals patterns worth recording:
+If this spec reveals patterns worth recording, save a native memory file (and add a `MEMORY.md` pointer):
 
-```bash
-# Record calibration data (after the issue is eventually completed)
-# This is a placeholder — Builder writes actual calibration after build
-toolbox-memory write --ns spec_gap --agent planner --key "<feature-type>-<area>" --value '{"gap":"<what was missing>","feature_type":"<type>"}'
+```markdown
+---
+name: spec-gap-<feature-type>-<area>
+description: spec gap for <feature-type> / <area> — what specs tend to miss here
+metadata:
+  type: reference
+---
+
+- **Gap:** <what was missing>
+- **Feature type:** <type>
 ```
 
 ## Spec Quality Checklist

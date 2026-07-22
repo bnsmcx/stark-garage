@@ -58,16 +58,17 @@ check_dir  ".claude/commands/ exists" "$TARGET/.claude/commands"
 check_dir  ".claude/agents/ exists" "$TARGET/.claude/agents"
 check_dir  ".claude/agents/extensions/ exists" "$TARGET/.claude/agents/extensions"
 check_dir  ".claude/skills/browser-automation/ exists" "$TARGET/.claude/skills/browser-automation"
-check_dir  ".claude/memory/ exists" "$TARGET/.claude/memory"
 check_dir  "agent_docs/ exists" "$TARGET/agent_docs"
 
-# --- Verify command count ---
+# --- Verify command count matches the golden source (no magic number; catches drift + deletions) ---
+EXPECTED_CMDS=$(ls "$SCRIPT_DIR/.claude/commands/"*.md 2>/dev/null | wc -l)
 CMD_COUNT=$(ls "$TARGET/.claude/commands/"*.md 2>/dev/null | wc -l)
-check "13 commands deployed" test "$CMD_COUNT" -eq 13
+check "all $EXPECTED_CMDS commands deployed" test "$CMD_COUNT" -eq "$EXPECTED_CMDS"
 
-# --- Verify agent count ---
+# --- Verify agent count matches the golden source ---
+EXPECTED_AGENTS=$(ls "$SCRIPT_DIR/.claude/agents/"*.md 2>/dev/null | wc -l)
 AGENT_COUNT=$(ls "$TARGET/.claude/agents/"*.md 2>/dev/null | wc -l)
-check "7 agents deployed" test "$AGENT_COUNT" -eq 7
+check "all $EXPECTED_AGENTS agents deployed" test "$AGENT_COUNT" -eq "$EXPECTED_AGENTS"
 
 # --- Verify specific files ---
 check_file "wiggum.md exists" "$TARGET/.claude/commands/wiggum.md"
@@ -80,8 +81,6 @@ check_file "browser-automation SKILL.md exists" "$TARGET/.claude/skills/browser-
 check_file "settings.local.json exists" "$TARGET/.claude/settings.local.json"
 check_file "issue-conventions.md exists" "$TARGET/agent_docs/issue-conventions.md"
 check_file "self-improvement.md exists" "$TARGET/agent_docs/self-improvement.md"
-check_file "lessons.md created (empty)" "$TARGET/.claude/lessons.md"
-check_file "lessons-archive.md created" "$TARGET/.claude/lessons-archive.md"
 
 # --- Verify .mcp.json content ---
 check ".mcp.json has playwright" grep -q "playwright" "$TARGET/.mcp.json"

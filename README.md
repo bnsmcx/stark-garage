@@ -192,7 +192,7 @@ Read-only. Also called internally by `/setup-release`.
 
 #### [`/pomo`](golden/.claude/commands/pomo.md) — Post-Mortem
 
-Captures lessons from debugging sessions. Writes to both [`lessons.md`](golden/examples/) and SQLite memory.
+Captures generalizable lessons from debugging sessions as harness-native memory files.
 
 ```
 /pomo                                  # Reflect on what just happened in this session
@@ -244,7 +244,7 @@ Prevents bloat in CLAUDE.md, agent_docs, lessons, and memory. Enforces [`BUDGETS
 /slim                                  # Audit everything
 ```
 
-Scans for redundant instructions, prunes stale lessons, runs `toolbox-memory prune`.
+Scans for redundant instructions and prunes stale, wrong, or promoted native-memory facts.
 
 #### [`/release-notes`](golden/.claude/commands/release-notes.md) — Release PR Description
 
@@ -323,28 +323,25 @@ There's a `tasks/todo.md` fallback for projects without a GitHub remote, but the
 
 ### Memory System
 
-Three complementary stores, each with a narrow scope:
+Self-improvement and cross-session knowledge use the **harness-native file-based memory** system —
+one fact per file under `~/.claude/projects/<slug>/memory/`, indexed by `MEMORY.md`, which Claude Code
+auto-loads at session start and writes/reads without any setup. No separate database or lessons file:
+as of v1.2.0 the golden set dropped both the `toolbox-memory` SQLite CLI and `.claude/lessons.md` in
+favor of native memory, which downstream usage showed was the only store that actually got maintained
+(see CHANGELOG / #27).
 
-- **Auto-memory flat files** (`~/.claude/projects/<slug>/memory/`) — user, feedback, project, and reference memories. System-prompt-native; Claude writes and reads these automatically.
-- **`.claude/lessons.md`** — project-scoped learned patterns with an in-file markdown lifecycle (`## Active` → `## Validated` → `## Promoted`, with archived entries moving into `.claude/lessons-archive.md`). Managed by `/pomo`.
-- **`toolbox-memory`** — SQLite + FTS5 store for agent-emitted signal only: `bug_pattern`, `spec_gap`, `calibration`, `routing`. Every bug fix and estimation miss is recorded automatically.
-
-```bash
-# Build the CLI
-cd golden && go build -o toolbox-memory ./cmd/toolbox-memory/
-
-# Query directly:
-toolbox-memory search --ns bug_pattern --query "nil pointer"
-toolbox-memory stats
-```
+Facts carry frontmatter (`name`, `description`, `metadata.type` = `user` | `feedback` | `project` |
+`reference`) so the harness can recall the relevant ones by description. Agents record signal
+automatically:
 
 | Trigger | What's recorded |
 |---------|----------------|
-| Debugger fixes a bug | Bug class, root cause, prevention strategy (`bug_pattern`) |
-| Reviewer finds spec gap | What the spec should have included (`spec_gap`) |
-| Builder completes a feature | Estimated vs actual hours (`calibration`) |
+| Debugger fixes a bug | Bug class, root cause, prevention strategy (`bug-pattern-*`) |
+| Reviewer finds spec gap | What the spec should have included (`spec-gap-*`) |
+| Builder completes a feature | Estimated vs actual hours (`calibration-*`) |
 
-`toolbox-memory` entries follow a simpler lifecycle: **active** (on write) → **validated** (once `hit_count >= 2`, applied by `toolbox-memory prune`) → optionally **promoted** (explicit) → **stale** (60 days idle) → **archived** (30 days after stale). `/pomo` runs lessons.md; `/slim` runs `toolbox-memory prune`.
+`/pomo` captures and dedupes lessons; `/slim` prunes stale, wrong, or promoted facts. When a pattern
+recurs enough to be a standing rule, it's promoted into CLAUDE.md and its memory file deleted.
 
 ### Golden Set Lifecycle
 
@@ -370,28 +367,21 @@ golden/
     settings.local.json              # Baseline permissions
   agent_docs/                        # On-demand reference docs
   skills/browser-automation/         # Browser tool decision guide
-  cmd/toolbox-memory/                # Go CLI source
-  internal/memory/                   # SQLite+FTS5 implementation
   tests/
-    smoke-test.sh                    # Deploy verification (29 checks)
-    cli-integration-test.sh          # Memory CLI end-to-end (25 checks)
-  examples/                          # CLAUDE.md example, lessons template
+    smoke-test.sh                    # Deploy verification
+  examples/                          # CLAUDE.md example
 ```
+
+The toolbox is Markdown-only (no build step) — as of v1.2.0 the Go `toolbox-memory` CLI was removed
+in favor of harness-native memory.
 
 ### Testing
 
 ```bash
 cd golden
 
-# Tier 1: Go unit tests (26 tests)
-go test ./internal/memory/ -v
-
-# Tier 2: Deploy smoke test (29 checks)
+# Deploy smoke test — verifies deploy.sh produces a correct golden-set deployment
 bash tests/smoke-test.sh
-
-# Tier 3: CLI integration test (25 checks)
-go build -o toolbox-memory ./cmd/toolbox-memory/
-bash tests/cli-integration-test.sh
 ```
 
 ### Design Decisions
