@@ -120,9 +120,17 @@ Summary:
 - Conflicts resolved: N
 ```
 
-Write calibration data to memory:
-```bash
-toolbox-memory write --ns calibration --agent builder --key "<feature-type>-<issue>" --value '{"estimated_hrs":N,"actual_hrs":N,"agents":N,"rounds":N}'
+Write calibration data to native memory (one fact per file, plus a `MEMORY.md` pointer):
+```markdown
+---
+name: calibration-<feature-type>-<issue>
+description: build calibration for <feature-type> — estimate vs actual effort
+metadata:
+  type: reference
+---
+
+- **Estimated hrs:** N · **Actual hrs:** N
+- **Agents:** N · **Fix rounds:** N
 ```
 
 ## Crash Recovery

@@ -38,16 +38,14 @@ For each issue, decide which bucket it falls into. **The bucket determines where
 | **Breaking change** | Anything that requires a client code change to keep working |
 | **Backend-only** | Observability, logging, lifecycle, internal refactors, RBAC slow path, etc. |
 | **Dependencies / toolchain** | Language/runtime bump, dependency-manifest changes, container base, security patches |
-| **Docs / infra** | Demo files, CI tweaks, internal docs |
+| **Docs / infra** | CI tweaks, internal docs |
 
 If an issue belongs in two buckets (e.g. a frontend-visible fix that also adds a new error code), put it in the higher-priority bucket and link to it from the lower one.
 
-### 3. Write the Header (4 lines, max)
+### 3. Write the Header (2 lines, max)
 
 ```markdown
 # Release: X.Y.Z
-
-> **Live demo:** run the project's local-run command → /demo/release-X.Y.Z.html
 
 **N issues · M PRs · K epics** — [one-sentence theme]
 ```
@@ -154,12 +152,9 @@ Two-to-five bullets. Things a reviewer or QA would want to flag. Skip if the ans
 ## Verification
 
 - Project validation command ✓
-- Interactive demo: **N/N** assertions pass (`/demo/release-X.Y.Z.html`)
 - Per-PR reviews: **APPROVED**
 - Cross-issue release review: **APPROVED** (reviewer + security-reviewer + ops-reviewer)
 ```
-
-No demo GIF — the canonical artifact is the embedded HTML demo linked at the top.
 
 ### 10. Below the Fold — Implementation Progress
 
@@ -203,8 +198,6 @@ Target shape — everything from the header through Verification should fit on *
 
 ```markdown
 # Release: X.Y.Z
-
-> **Live demo:** run the project's local-run command → /demo/release-X.Y.Z.html
 
 **N issues · M PRs · K epics** — [one-sentence theme]
 
@@ -257,7 +250,6 @@ gh pr edit PR_NUMBER --body-file /tmp/release-notes.md
 - **Use horizontal rules to separate above-fold from below-fold.** Visual whitespace is part of the readability budget.
 - **Skip empty sections entirely.** No "Database Changes: N/A" placeholders. Drop the heading if it doesn't apply (except the Frontend section, which always appears).
 - **No marketing prose.** "Previously hidden item types now appear on `GET /api/widgets`" is fine. "Empowers users with comprehensive visibility…" is not.
-- ALWAYS link the embedded HTML demo at the very top — that is the canonical verification artifact, not a GIF.
 - ALWAYS count PRs, issues, and epics accurately from the milestone.
 - NEVER use bare issue numbers without context — each `#NN` reference appears alongside a one-line description of what shipped.
 - NEVER describe internal implementation in the Frontend section — that section is strictly about the API surface the client sees.

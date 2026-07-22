@@ -10,5 +10,4 @@ Line and instruction limits to prevent bloat. Enforced by `/slim`.
 | Per command file (.claude/commands/*.md) | 300 | — | Single workflow |
 | Per agent file (.claude/agents/*.md) | 500 | — | Full agent definition |
 | Per agent_doc (agent_docs/*.md) | 100 | — | Reference data |
-| lessons.md | — | 40 entries | Active lessons only |
-| Memory (toolbox.db) | — | 200 active | Auto-pruned by lifecycle |
+| Native memory (`MEMORY.md` + per-fact files) | — | — | Harness-managed; not enforced by /slim. Prune stale/wrong facts on /pomo. |

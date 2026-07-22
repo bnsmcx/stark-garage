@@ -39,11 +39,8 @@ Single issue, no agents, no release context. Fast path.
 
 ### 1. Memory Check
 
-Query memory for relevant lessons:
-```bash
-grep -ri "<issue scope keywords>" .claude/lessons.md
-```
-If results found, note them as context warnings.
+Consult native memory for relevant lessons: scan the auto-recalled memories and `MEMORY.md` for
+entries matching the issue scope keywords. If any are relevant, note them as context warnings.
 
 ### 2. Fetch & Branch
 
@@ -123,9 +120,7 @@ If no open issues remain → release complete (jump to Release Completion).
 
 ### 3. Memory Check
 
-```bash
-grep -ri "<issue scope>" .claude/lessons.md
-```
+Consult native memory (auto-recalled memories + `MEMORY.md`) for entries matching the issue scope.
 
 ### 4. Planner Enrichment
 
@@ -240,10 +235,9 @@ When all milestone issues are closed:
 2. **Run `/review-pr` on the release PR (hard gate)** — catches cross-issue interactions that per-issue reviews miss
 3. If review returns REQUEST_CHANGES: fix findings, re-review (max 3 iterations)
 4. Run `/release-notes` to generate the full release PR description
-5. Run `/release-demo` to generate the E2E test script, run it, and record the demo gif
-6. Mark draft PR ready for review: `gh pr ready RELEASE_PR_NUMBER`
-7. Do NOT auto-merge to main
-8. Report: milestone complete, PR number, issue count
+5. Mark draft PR ready for review: `gh pr ready RELEASE_PR_NUMBER`
+6. Do NOT auto-merge to main
+7. Report: milestone complete, PR number, issue count
 
 ## Discovery Escape Hatch
 

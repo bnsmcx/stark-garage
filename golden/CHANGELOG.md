@@ -1,5 +1,85 @@
 # Changelog
 
+## 2026-07-22 — v1.2.0: /update-claude reads the CHANGELOG to catch removals (#41)
+
+### Changed
+- `/update-claude` Step 8 now reads `golden/CHANGELOG.md` and, for each unsynced **Removed**/**Changed**
+  entry, checks the project for both lingering files AND lingering *references* (grepping CLAUDE.md,
+  `.claude/`, and `agent_docs/`). Previously it only detected whole-file removals, so removed content
+  or references inside files (e.g. the toolbox-memory / lessons.md references dropped this release)
+  could persist unnoticed in deployed projects. Step 10 surfaces both kinds for cleanup.
+
+## 2026-07-22 — v1.2.0: remove /release-demo and bootstrap-generated project-specific commands (#39)
+
+### Removed
+- **`/release-demo`** command (`golden/.claude/commands/release-demo.md`). It assumed a web-API
+  service with a dev binary, a servable demo route, and an OpenAPI/Bearer surface — overly
+  project-specific for a general-purpose toolbox (inapplicable to CLI/library/pipeline/Markdown
+  projects). Command count 15 → 14.
+- **Bootstrap-generated project-specific commands.** Deleted `/bootstrap` Phase 3.4 entirely;
+  bootstrap no longer generates `add-endpoint`, `add-component`, `add-pipeline-step`, or
+  `update-docs`. Subsequent phases renumbered (3.4–3.11).
+
+### Changed
+- `wiggum.md` Release Completion: dropped the `/release-demo` step (remaining steps renumbered).
+- `release-notes.md`: removed the live-demo header link, the demo verification line, and the
+  demo-GIF prose/rule (the template no longer assumes a demo artifact).
+- `update-claude.md` / `improve-golden-set.md`: skip-lists now reference "user-authored
+  project-specific commands" instead of naming the (removed) generated commands.
+- `README.md`: removed the `/release-demo` section; command count updated to 14 in three places.
+
+## 2026-07-22 — v1.2.0: drop toolbox-memory + lessons.md for harness-native memory (#27)
+
+### Decision
+The golden set previously shipped two competing self-improvement memory layers — the `toolbox-memory`
+SQLite+FTS5 CLI and the `.claude/lessons.md` flat file — while most command bodies had drifted to only
+one of them. A downstream usage audit (Athena, 2026-07-22) found **both effectively unused**: the
+`toolbox-memory` DB held a single never-read row; `lessons.md` was weeks stale. Meanwhile the
+harness-native file-based memory (`MEMORY.md` index + one file per fact, auto-recalled each session)
+was actively maintained. **Decision: drop both golden-set mechanisms and adopt harness-native memory
+as the single source of truth.**
+
+### Removed
+- `cmd/toolbox-memory/` and `internal/memory/` (the entire Go CLI + library), `go.mod`, `go.sum`,
+  `tests/cli-integration-test.sh`. The repo is now Markdown-only — no Go toolchain required.
+- `.claude/lessons.md` / `.claude/lessons-archive.md` machinery: deploy.sh no longer creates them;
+  `examples/lessons.md.example` deleted; the `Bash(toolbox-memory:*)` permission removed.
+- deploy.sh: `go` prerequisite check, `toolbox-memory` build/install, memory-db init, `.claude/memory/` dir.
+
+### Changed
+- `CLAUDE.md` (+ `examples/CLAUDE.md.example`): "Session Start" and "Continuous Improvement" now point
+  at harness-native memory.
+- Agents (`builder`, `debugger`, `planner`, `reviewer`): memory read/write steps rewritten to consult
+  and save native memory files (bug-pattern / spec-gap / calibration facts) instead of `toolbox-memory`.
+- Commands (`pomo`, `slim`, `triage`, `wiggum`, `update-claude`, `improve-golden-set`, `bootstrap`):
+  lesson capture/pruning and memory checks rewritten for native memory.
+- `agent_docs/self-improvement.md`: rewritten for the native-memory format (frontmatter + `MEMORY.md` pointer).
+- `BUDGETS.md`: replaced the `lessons.md` (40-entry) and `toolbox.db` (200-active) rows with a single
+  harness-managed native-memory row.
+- `tests/smoke-test.sh`: dropped the `.claude/memory/` and lessons-file assertions; command/agent
+  counts now derived from the golden source instead of hardcoded magic numbers (also resolves #14).
+
+### Supersedes
+- #30 (gofmt drift in `main.go`) and #23 (`migrate()` error suppression) — closed as won't-fix; the
+  files they targeted are deleted.
+
+## 2026-07-22 — v1.2.0: design decision — OpenCode-compatible commands via canonical generator (#29)
+
+### Decision
+The golden set will drop its "Claude Code only" commitment and become **portable across Claude Code
+and OpenCode**. Approach: **Option A — a canonical command generator.** Command/skill definitions live
+in a single tool-agnostic source of truth; a generator emits both `.claude/commands/*.md` (Claude Code
+format) and `.opencode/commands/*.md` (OpenCode format), so the two never drift.
+
+Rationale: Option B (thin wrapper files) drifts over time; Option C (deploy-time mirroring) hides the
+translation in `deploy.sh` and can't be reviewed as source. A canonical generator is the only approach
+with a single reviewable source of truth. Simplified by the v1.2.0 memory change (#27): with
+`toolbox-memory` gone, cross-tool memory reduces to native memory + a `CLAUDE.md`/`AGENTS.md` pair.
+
+### Scope this release
+Decision only — **no generator is built in v1.2.0.** Implementation is split into scoped follow-up
+issues (see #29). This entry + the README "Design Decisions" update record the direction.
+
 ## 2026-05-27 — /improve-golden-set from Athena v2 services-0.17.0
 
 ### Changed

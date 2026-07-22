@@ -187,19 +187,11 @@ Merge project-specific permissions into the existing `allow` array based on dete
 
 Without these, the indexer agent cannot write its findings and downstream agents (Planner, Builder) must re-explore the codebase from scratch each session.
 
-### 3.4 Create Project-Specific Commands
-
-Based on the detected primary abstraction:
-- **API projects:** `.claude/commands/add-endpoint.md`
-- **React/frontend:** `.claude/commands/add-component.md`
-- **Pipeline/data:** `.claude/commands/add-pipeline-step.md`
-- **All projects with docs/:** `.claude/commands/update-docs.md`
-
-### 3.5 Augment Code Reviewer
+### 3.4 Augment Code Reviewer
 
 Find the `<!-- bootstrap: project-specific checks below -->` marker in `.claude/agents/code-reviewer.md`. Append architecture-specific review criteria.
 
-### 3.6 Configure .mcp.json
+### 3.5 Configure .mcp.json
 
 Add project-relevant MCP servers. Always include:
 - **Playwright MCP** — for browser automation and E2E testing
@@ -207,33 +199,29 @@ Add project-relevant MCP servers. Always include:
 
 Only add additional servers that clearly match the project's needs.
 
-### 3.7 Configure .gitignore
+### 3.6 Configure .gitignore
 
 If the user chose to gitignore Claude config, append the relevant entries.
 
-### 3.8 Settings.json Hooks
+### 3.7 Settings.json Hooks
 
 Create or update `.claude/settings.json` with PostToolUse hooks for detected linters/formatters (ESLint for TypeScript, ruff for Python, etc.) and PreToolUse hooks to block editing sensitive files (.env).
 
-### 3.9 Configure Issue Tracker
+### 3.8 Configure Issue Tracker
 
 For non-GitHub trackers (Jira, Linear, GitLab): update `agent_docs/issue-tracker-ops.md` with the appropriate CLI equivalents and add permissions.
 
-### 3.10 Configure Task Tracking Mode
+### 3.9 Configure Task Tracking Mode
 
 If in-repo task file selected: create `tasks/todo.md`, modify CLAUDE.md references.
 
-### 3.11 Initialize Memory Database
+### 3.10 Memory
 
-Initialize the toolbox memory system:
+No setup required. Self-improvement lessons and cross-session knowledge persist in the harness-native
+memory system (`MEMORY.md` index + one file per fact), which Claude Code manages automatically. See
+`agent_docs/self-improvement.md` for the format agents use.
 
-```bash
-toolbox-memory init
-```
-
-If the `toolbox-memory` CLI is not available, create an empty memory database placeholder. This enables `/slim` memory pruning and cross-session knowledge retention.
-
-### 3.12 Post-bootstrap budget check
+### 3.11 Post-bootstrap budget check
 
 1. Count CLAUDE.md total lines (baseline + project-specific)
 2. Check against combined budget from `BUDGETS.md`: baseline + project max
@@ -249,10 +237,9 @@ If the `toolbox-memory` CLI is not available, create an empty memory database pl
 - CLAUDE.md: Appended project-specific configuration
 - agent_docs/: Created project reference docs
 - settings.local.json: Added [N] project-specific permissions
-- Commands created: [list]
 - Code reviewer: Augmented with [project-type] checks
 - MCP servers: Playwright MCP, Chrome DevTools MCP [+ others]
-- Memory database: Initialized
+- Memory: harness-native (no setup required)
 - [.gitignore updated / docs/ scaffold / hooks — if applicable]
 
 ### What's Configured:
