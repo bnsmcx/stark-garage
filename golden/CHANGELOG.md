@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-07-22 — v1.2.0: /update-claude reads the CHANGELOG to catch removals (#41)
+
+### Changed
+- `/update-claude` Step 8 now reads `golden/CHANGELOG.md` and, for each unsynced **Removed**/**Changed**
+  entry, checks the project for both lingering files AND lingering *references* (grepping CLAUDE.md,
+  `.claude/`, and `agent_docs/`). Previously it only detected whole-file removals, so removed content
+  or references inside files (e.g. the toolbox-memory / lessons.md references dropped this release)
+  could persist unnoticed in deployed projects. Step 10 surfaces both kinds for cleanup.
+
 ## 2026-07-22 — v1.2.0: remove /release-demo and bootstrap-generated project-specific commands (#39)
 
 ### Removed
