@@ -387,7 +387,7 @@ bash tests/smoke-test.sh
 ### Design Decisions
 
 1. **15 commands + 7 agents**, not 29 agents. Composability over completeness.
-2. **Claude Code only.** No Copilot/Cursor variants. Biggest maintenance win.
+2. **Claude Code first, OpenCode-portable.** No Copilot/Cursor variants. Commands and skills will be generated for both Claude Code and OpenCode from a single canonical source (see CHANGELOG / #29 for the decision; implementation tracked separately).
 3. **Two clean modes.** Ad-hoc or release. No heuristics.
 4. **Memory writes are automatic.** Triggered by events, never manual.
 5. **Issues are the task truth.** State file is codebase truth. No overlap.
