@@ -1,22 +1,5 @@
 # Changelog
 
-## 2026-07-22 — v1.2.0: design decision — OpenCode-compatible commands via canonical generator (#29)
-
-### Decision
-The golden set will drop its "Claude Code only" commitment and become **portable across Claude Code
-and OpenCode**. Approach: **Option A — a canonical command generator.** Command/skill definitions live
-in a single tool-agnostic source of truth; a generator emits both `.claude/commands/*.md` (Claude Code
-format) and `.opencode/commands/*.md` (OpenCode format), so the two never drift.
-
-Rationale: Option B (thin wrapper files) drifts over time; Option C (deploy-time mirroring) hides the
-translation in `deploy.sh` and can't be reviewed as source. A canonical generator is the only approach
-with a single reviewable source of truth. Simplified by the v1.2.0 memory change (#27): with
-`toolbox-memory` gone, cross-tool memory reduces to native memory + a `CLAUDE.md`/`AGENTS.md` pair.
-
-### Scope this release
-Decision only — **no generator is built in v1.2.0.** Implementation is split into scoped follow-up
-issues (see #29). This entry + the README "Design Decisions" update record the direction.
-
 ## 2026-07-22 — v1.2.0: drop toolbox-memory + lessons.md for harness-native memory (#27)
 
 ### Decision
@@ -51,6 +34,23 @@ as the single source of truth.**
 ### Supersedes
 - #30 (gofmt drift in `main.go`) and #23 (`migrate()` error suppression) — closed as won't-fix; the
   files they targeted are deleted.
+
+## 2026-07-22 — v1.2.0: design decision — OpenCode-compatible commands via canonical generator (#29)
+
+### Decision
+The golden set will drop its "Claude Code only" commitment and become **portable across Claude Code
+and OpenCode**. Approach: **Option A — a canonical command generator.** Command/skill definitions live
+in a single tool-agnostic source of truth; a generator emits both `.claude/commands/*.md` (Claude Code
+format) and `.opencode/commands/*.md` (OpenCode format), so the two never drift.
+
+Rationale: Option B (thin wrapper files) drifts over time; Option C (deploy-time mirroring) hides the
+translation in `deploy.sh` and can't be reviewed as source. A canonical generator is the only approach
+with a single reviewable source of truth. Simplified by the v1.2.0 memory change (#27): with
+`toolbox-memory` gone, cross-tool memory reduces to native memory + a `CLAUDE.md`/`AGENTS.md` pair.
+
+### Scope this release
+Decision only — **no generator is built in v1.2.0.** Implementation is split into scoped follow-up
+issues (see #29). This entry + the README "Design Decisions" update record the direction.
 
 ## 2026-05-27 — /improve-golden-set from Athena v2 services-0.17.0
 
