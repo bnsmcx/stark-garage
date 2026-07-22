@@ -1,5 +1,24 @@
 # Changelog
 
+## 2026-07-22 — v1.2.0: remove /release-demo and bootstrap-generated project-specific commands (#39)
+
+### Removed
+- **`/release-demo`** command (`golden/.claude/commands/release-demo.md`). It assumed a web-API
+  service with a dev binary, a servable demo route, and an OpenAPI/Bearer surface — overly
+  project-specific for a general-purpose toolbox (inapplicable to CLI/library/pipeline/Markdown
+  projects). Command count 15 → 14.
+- **Bootstrap-generated project-specific commands.** Deleted `/bootstrap` Phase 3.4 entirely;
+  bootstrap no longer generates `add-endpoint`, `add-component`, `add-pipeline-step`, or
+  `update-docs`. Subsequent phases renumbered (3.4–3.11).
+
+### Changed
+- `wiggum.md` Release Completion: dropped the `/release-demo` step (remaining steps renumbered).
+- `release-notes.md`: removed the live-demo header link, the demo verification line, and the
+  demo-GIF prose/rule (the template no longer assumes a demo artifact).
+- `update-claude.md` / `improve-golden-set.md`: skip-lists now reference "user-authored
+  project-specific commands" instead of naming the (removed) generated commands.
+- `README.md`: removed the `/release-demo` section; command count updated to 14 in three places.
+
 ## 2026-07-22 — v1.2.0: drop toolbox-memory + lessons.md for harness-native memory (#27)
 
 ### Decision

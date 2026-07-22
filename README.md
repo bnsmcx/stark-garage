@@ -1,6 +1,6 @@
 # Stark Garage
 
-An agentic engineering toolbox for Claude Code. 15 slash commands, 7 specialized agents, and a browser-automation skill that handle everything from a single bug fix to a full autonomous release with parallel builds and deep security review.
+An agentic engineering toolbox for Claude Code. 14 slash commands, 7 specialized agents, and a browser-automation skill that handle everything from a single bug fix to a full autonomous release with parallel builds and deep security review.
 
 **GitHub Issues are the backbone.** Every piece of work is a GitHub issue. Specs live in issue bodies. Dependencies are tracked in issue bodies. Milestones scope releases. The `gh` CLI drives everything.
 
@@ -257,15 +257,6 @@ Generates a comprehensive, user-facing release PR description from closed milest
 
 Produces narrative "What's New" sections, API/database change tables, and implementation progress. Applies it via `gh pr edit`.
 
-#### [`/release-demo`](golden/.claude/commands/release-demo.md) — Release Demo & E2E Validation
-
-Generates an E2E test script from closed milestone issues, runs it, fixes failures, and records a looping VHS gif for the release PR.
-
-```
-/release-demo                          # Auto-detect release branch + milestone
-/release-demo v0.9.26                  # Target a specific version
-```
-
 ### Agents
 
 Auto-invoked during release mode and deep reviews. You never call these directly. Definitions live in [`golden/.claude/agents/`](golden/.claude/agents/).
@@ -362,7 +353,7 @@ golden/
   BUDGETS.md                         # Line/instruction limits
   deploy.sh                          # Install into any project
   .claude/
-    commands/                        # 15 slash commands
+    commands/                        # 14 slash commands
     agents/                          # 7 agent definitions
     settings.local.json              # Baseline permissions
   agent_docs/                        # On-demand reference docs
@@ -386,7 +377,7 @@ bash tests/smoke-test.sh
 
 ### Design Decisions
 
-1. **15 commands + 7 agents**, not 29 agents. Composability over completeness.
+1. **14 commands + 7 agents**, not 29 agents. Composability over completeness.
 2. **Claude Code first, OpenCode-portable.** No Copilot/Cursor variants. Commands and skills will be generated for both Claude Code and OpenCode from a single canonical source (see CHANGELOG / #29 for the decision; implementation tracked separately).
 3. **Two clean modes.** Ad-hoc or release. No heuristics.
 4. **Memory writes are automatic.** Triggered by events, never manual.
