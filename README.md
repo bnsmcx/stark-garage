@@ -238,7 +238,7 @@ Classifies project changes as golden-original, modified, or novel. Generalizes b
 
 #### [`/slim`](golden/.claude/commands/slim.md) — Audit & Compress
 
-Prevents bloat in CLAUDE.md, agent_docs, lessons, and memory. Enforces [`BUDGETS.md`](golden/BUDGETS.md).
+Prevents bloat in CLAUDE.md, agent_docs, and native memory. Enforces [`BUDGETS.md`](golden/BUDGETS.md).
 
 ```
 /slim                                  # Audit everything
