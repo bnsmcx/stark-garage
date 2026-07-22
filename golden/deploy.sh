@@ -28,10 +28,6 @@ if ! command -v node &> /dev/null || ! command -v npm &> /dev/null; then
   MISSING+=("node + npm — required for browser automation tools and MCP servers")
 fi
 
-if ! command -v go &> /dev/null; then
-  MISSING+=("go — required to build toolbox-memory CLI (https://go.dev)")
-fi
-
 if ! command -v claude &> /dev/null; then
   MISSING+=("claude (Claude Code CLI) — required to run the toolbox (https://claude.ai/code)")
 fi
@@ -109,7 +105,6 @@ echo "[+] BUDGETS.md"
 mkdir -p "$TARGET/.claude/commands"
 mkdir -p "$TARGET/.claude/agents/extensions"
 mkdir -p "$TARGET/.claude/skills/browser-automation"
-mkdir -p "$TARGET/.claude/memory"
 mkdir -p "$TARGET/.claude/state"
 mkdir -p "$TARGET/.claude/reviews"
 mkdir -p "$TARGET/.claude/builder/checkpoints"
@@ -150,15 +145,9 @@ for f in "$GOLDEN_DIR/agent_docs/"*; do
   echo "[+] agent_docs/$(basename "$f")"
 done
 
-# Lessons files (only if they don't exist)
-if [ ! -f "$TARGET/.claude/lessons.md" ]; then
-  touch "$TARGET/.claude/lessons.md"
-  echo "[+] .claude/lessons.md (empty)"
-fi
-if [ ! -f "$TARGET/.claude/lessons-archive.md" ]; then
-  touch "$TARGET/.claude/lessons-archive.md"
-  echo "[+] .claude/lessons-archive.md (empty)"
-fi
+# Self-improvement lessons persist in the harness-native memory system
+# (MEMORY.md + one file per fact), which Claude Code manages automatically.
+# No lessons files are created here — see agent_docs/self-improvement.md.
 
 # --- MCP Configuration ---
 if [ ! -f "$TARGET/.mcp.json" ]; then
@@ -179,49 +168,6 @@ MCPEOF
   echo "[+] .mcp.json (Playwright MCP + Chrome DevTools MCP)"
 else
   echo "[=] .mcp.json exists, skipping"
-fi
-
-# --- Build and install toolbox-memory ---
-echo ""
-echo "Building toolbox-memory..."
-
-if command -v toolbox-memory &> /dev/null; then
-  echo "[=] toolbox-memory already on PATH"
-else
-  if command -v go &> /dev/null; then
-    INSTALL_DIR="${GOBIN:-$(go env GOPATH)/bin}"
-    echo "[*] Building toolbox-memory and installing to $INSTALL_DIR ..."
-    if (cd "$GOLDEN_DIR" && go build -o "$INSTALL_DIR/toolbox-memory" ./cmd/toolbox-memory/) 2>&1; then
-      echo "[+] toolbox-memory installed to $INSTALL_DIR/toolbox-memory"
-      # Verify it's on PATH now
-      if ! command -v toolbox-memory &> /dev/null; then
-        echo "[!] toolbox-memory built but $INSTALL_DIR is not on your PATH"
-        echo "    Add this to your shell profile: export PATH=\"\$PATH:$INSTALL_DIR\""
-        ERRORS+=("toolbox-memory built at $INSTALL_DIR/toolbox-memory but not on PATH")
-      fi
-    else
-      echo "[!] Failed to build toolbox-memory"
-      ERRORS+=("toolbox-memory build failed — run: cd $GOLDEN_DIR && go build -o /usr/local/bin/toolbox-memory ./cmd/toolbox-memory/")
-    fi
-  else
-    echo "[!] go not found — cannot build toolbox-memory"
-    ERRORS+=("toolbox-memory not built — go is not installed")
-  fi
-fi
-
-# Initialize memory database
-if [ ! -f "$TARGET/.claude/memory/toolbox.db" ]; then
-  if command -v toolbox-memory &> /dev/null; then
-    if toolbox-memory init --db "$TARGET/.claude/memory/toolbox.db" 2>&1; then
-      echo "[+] .claude/memory/toolbox.db initialized"
-    else
-      echo "[!] Failed to init memory db"
-      ERRORS+=("memory database initialization failed")
-    fi
-  else
-    echo "[!] Skipping memory db init (toolbox-memory not available)"
-    ERRORS+=("memory database not initialized — toolbox-memory not on PATH")
-  fi
 fi
 
 # --- Install browser automation ---
@@ -273,7 +219,7 @@ AGENTS=$(ls "$TARGET/.claude/agents/"*.md 2>/dev/null | wc -l)
 echo "Installed:"
 echo "  $CMDS commands"
 echo "  $AGENTS agents"
-echo "  agent_docs/, skills/, memory/"
+echo "  agent_docs/, skills/"
 echo ""
 echo "Next steps:"
 echo "  1. cd $TARGET"

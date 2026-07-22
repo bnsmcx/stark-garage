@@ -16,15 +16,15 @@
 
 ## Session Start
 
-1. Review `.claude/lessons.md` for patterns relevant to current work. If >40 entries, flag for pruning.
+1. Review the native memories surfaced automatically at session start (the `MEMORY.md` index + recalled facts) for patterns relevant to current work.
 2. Assess state: run `/triage` or check the task tracker
 3. Decide next action: continue interrupted work, pick next task, or plan new work
 
-For bug patterns / spec gaps / calibration from prior work, see `toolbox-memory search --ns bug_pattern` (invoked by planner/debugger agents, not session-start boilerplate).
+For bug patterns / spec gaps / calibration from prior work, consult native memory — recalled automatically and searchable by description (planner/debugger agents rely on it, not session-start boilerplate).
 
 ## Continuous Improvement
 
-Maintain `.claude/lessons.md` with patterns from corrections and reviews. See `agent_docs/self-improvement.md` for format and triggers.
+Capture patterns from corrections and reviews as native memory files (one fact per file, indexed by `MEMORY.md`). See `agent_docs/self-improvement.md` for format and triggers.
 
 ## Issue Tracker
 
@@ -53,7 +53,7 @@ If a test file you did NOT modify is failing, create an issue and continue. Do n
 |-----|-------------|
 | `agent_docs/issue-conventions.md` | Creating or editing issues |
 | `agent_docs/issue-tracker-ops.md` | Running issue tracker CLI commands |
-| `agent_docs/self-improvement.md` | Updating lessons.md or memory |
+| `agent_docs/self-improvement.md` | Capturing lessons in native memory |
 | `agent_docs/build-and-test.md` | Building, testing, or running the project |
 | `agent_docs/project-structure.md` | Understanding project layout |
 

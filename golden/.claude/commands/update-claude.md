@@ -190,7 +190,7 @@ After applying all changes, re-measure CLAUDE.md against `BUDGETS.md`:
 - NEVER remove project-specific commands (those not in the golden set)
 - NEVER remove project-specific MCP servers
 - NEVER auto-apply changes — always present each change for user approval
-- NEVER touch `.claude/lessons.md`, `tasks/todo.md`, or `.claude/settings.json` (hooks)
+- NEVER touch native memory (harness-managed), `tasks/todo.md`, or `.claude/settings.json` (hooks)
 - ALWAYS preserve project-specific agent augmentations (content below agent bootstrap markers)
 - If the project's CLAUDE.md baseline diverged from golden, show both versions and let the user decide
 - If a command was both modified locally and updated in golden, treat as diverged — never silently overwrite

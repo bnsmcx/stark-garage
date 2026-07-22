@@ -39,11 +39,8 @@ Single issue, no agents, no release context. Fast path.
 
 ### 1. Memory Check
 
-Query memory for relevant lessons:
-```bash
-grep -ri "<issue scope keywords>" .claude/lessons.md
-```
-If results found, note them as context warnings.
+Consult native memory for relevant lessons: scan the auto-recalled memories and `MEMORY.md` for
+entries matching the issue scope keywords. If any are relevant, note them as context warnings.
 
 ### 2. Fetch & Branch
 
@@ -123,9 +120,7 @@ If no open issues remain → release complete (jump to Release Completion).
 
 ### 3. Memory Check
 
-```bash
-grep -ri "<issue scope>" .claude/lessons.md
-```
+Consult native memory (auto-recalled memories + `MEMORY.md`) for entries matching the issue scope.
 
 ### 4. Planner Enrichment
 
