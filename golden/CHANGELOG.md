@@ -1,5 +1,22 @@
 # Changelog
 
+## 2026-07-22 — /improve-golden-set from Athena v2 services
+
+### Removed
+- `Write(.claude/**)` from `golden/.claude/settings.local.json` `allow` list. Claude Code's
+  permission checker does not recognize `Write()` rules for file-editing tools — only `Edit(path)`
+  is honored — so the entry was inert and printed an on-exit warning
+  (`Write(.claude/**) is not matched by file permission checks`) in every deployed project.
+  `Edit(.claude/**)` (kept) already covers editing under `.claude/`.
+
+### Why
+- Surfaced downstream (Athena v2 services, 2026-07-22): the project removed the redundant rule on
+  its own to silence the exit-time warning, then `/improve-golden-set` traced it back to the golden
+  baseline so every future bootstrap/deploy is warning-free.
+
+### Budget impact
+- No budgeted file touched (settings.local.json is not budget-tracked).
+
 ## 2026-07-22 — v1.2.0: /update-claude reads the CHANGELOG to catch removals (#41)
 
 ### Changed
