@@ -385,11 +385,4 @@ bash tests/smoke-test.sh
 6. **Retry budget of 3 everywhere.** Prevents infinite loops.
 7. **Golden set evolves.** Every project improves the template.
 
-### Origins
-
-This toolbox is a hybrid of two systems, each battle-tested on production projects:
-
-- **The [Avengers](https://github.com/terrancedjones/Avengers)** — 29 specialized agents with pipeline orchestration, parallel review, SQLite+FTS5 memory, and 6 autopilot modes. Great depth, high maintenance cost.
-- **The [Skills System](https://github.com/quadradad/claude-bootstrapping)** — 18 composable slash commands with issues as state, fail-forward loops, and a golden set portability pattern. Great simplicity, limited depth.
-
 The deep-dive analysis that informed this design is in the companion document [`agentic-engineering-deep-dive.md`](https://github.com/bnsmcx/stark-garage).
