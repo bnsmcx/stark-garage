@@ -52,6 +52,18 @@ for src in "$SRC_DIR"/*.md; do
     f && sub(/^description:[[:space:]]*/, "") { print; exit }
   ' "$src")"
 
+  # Reject malformed source rather than silently emitting an empty file. The first
+  # line must be exactly `---` (this also catches CRLF, whose opener is `---\r`),
+  # and a description must be present.
+  if ! head -n1 "$src" | grep -q '^---$'; then
+    echo "[!] $name: source does not open with a '---' frontmatter block (CRLF line endings?)" >&2
+    exit 1
+  fi
+  if [ -z "$desc" ]; then
+    echo "[!] $name: no 'description:' found in frontmatter" >&2
+    exit 1
+  fi
+
   {
     echo "---"
     printf 'description: %s\n' "$desc"
