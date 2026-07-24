@@ -1,5 +1,18 @@
 # Changelog
 
+## 2026-07-24 — v1.3.0: AGENTS.md for OpenCode rule discovery (#35)
+
+### Added
+- `golden/AGENTS.md` — thin, zero-duplication pointer that makes `CLAUDE.md` the single source of
+  project rules for `AGENTS.md`-aware tools (OpenCode), with an `@CLAUDE.md` import + prose fallback
+  and OpenCode-specific orientation notes. No content duplication, so nothing to drift.
+- `deploy.sh` deploys `AGENTS.md`; `smoke-test.sh` asserts it lands in the target.
+
+### Notes
+- OpenCode reads `AGENTS.md` as primary (falls back to `CLAUDE.md` only when absent), so the pointer is
+  load-bearing; kept as a reference rather than a copy to avoid drift with each project's CLAUDE.md.
+  Third step of the OpenCode portability epic (#43).
+
 ## 2026-07-24 — v1.3.0: deploy .opencode/commands (#34)
 
 ### Changed

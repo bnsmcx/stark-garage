@@ -57,6 +57,7 @@ check ".opencode/commands in sync with .claude/commands" bash "$SCRIPT_DIR/scrip
 echo "--- Verifying Structure ---"
 
 check_file "CLAUDE.md created" "$TARGET/CLAUDE.md"
+check_file "AGENTS.md created (OpenCode)" "$TARGET/AGENTS.md"
 check_file "BUDGETS.md created" "$TARGET/BUDGETS.md"
 check_file ".mcp.json created" "$TARGET/.mcp.json"
 check_dir  ".claude/commands/ exists" "$TARGET/.claude/commands"
