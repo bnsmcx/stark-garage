@@ -1,0 +1,232 @@
+---
+description: Extract generalized improvements from a bootstrapped project back into the golden set
+---
+
+# /improve-golden-set — Golden Set Extraction
+
+Extract generalizable improvements from a bootstrapped project back into the golden set. This is the reverse flow of `/bootstrap` — instead of deploying config outward, you pull proven improvements inward.
+
+Can be run from the golden set repo (local mode) or from any project (GitHub mode — pushes a PR to the golden set repo).
+
+## Invocation
+
+```
+/improve-golden-set ~/dev/my-project              # Local: run from golden set repo, point at project
+/improve-golden-set                                # GitHub: run from a bootstrapped project, push PR to golden set repo
+/improve-golden-set --repo owner/repo              # GitHub: specify the golden set repo explicitly
+```
+
+**GitHub mode** (no path argument or `--repo`):
+- Detects improvements in the current project
+- Creates a branch and PR on the golden set repo via `gh`
+- Default target repo: `bnsmcx/stark-garage`
+
+**Local mode** (path argument):
+- Classic behavior — run from the golden set repo, point at a bootstrapped project
+
+## Steps
+
+### 1. Validate the target project
+
+Confirm the target path:
+- Directory exists
+- Has `CLAUDE.md` with the bootstrap marker (`<!-- bootstrap: project-specific below -->`)
+- Has `.claude/` directory
+
+If any check fails, report the failure and stop.
+
+### 2. Scan the target project
+
+Read from the target project:
+- **`CLAUDE.md`** — split at the bootstrap marker into baseline and project-specific
+- **`.claude/commands/*.md`** — all command files
+- **`.claude/agents/*.md`** — all agent files
+- **`.claude/settings.local.json`**
+- **`.mcp.json`**
+- **`agent_docs/*.md`** — reference documents
+
+Then read the golden set equivalents from the current repo's `golden/` directory.
+
+### 3. Classify each target item
+
+For each item found in the target project, classify:
+- **Golden original:** Content matches the golden set exactly
+- **Golden modified:** Exists in golden set but has been edited in the project
+- **Novel:** Exists in the project but not in the golden set
+
+**Skip these items — never extract:**
+- Content below the bootstrap marker in CLAUDE.md
+- Native memory (harness-managed; `MEMORY.md` + per-fact files)
+- `tasks/todo.md`
+- User-authored project-specific commands (any command not in the golden set)
+
+### 4. Diff against the golden set
+
+For each classified item, build a diff report:
+- **CLAUDE.md baseline:** Line-by-line comparison against `golden/CLAUDE.md`
+- **Commands:** Diff modified, summarize novel
+- **Agents:** Diff modified, summarize novel
+- **settings.local.json:** Compare `allow` arrays, filter out project-specific permissions
+- **.mcp.json:** Diff server configurations
+- **agent_docs/:** Classify as golden original, golden modified, novel, or project-specific
+
+If nothing has changed or everything is project-specific, report "No extractable improvements found" and stop.
+
+### 5. Classify by content type
+
+For each Novel or Golden modified item, classify:
+
+**Instruction** — a directive that changes behavior:
+- Goes in CLAUDE.md (if universal) or a command file (if task-specific)
+
+**Reference data** — information looked up during execution:
+- Goes in `agent_docs/` (never CLAUDE.md)
+
+**Hybrid** — instruction with embedded reference data:
+- Split it. Instruction in CLAUDE.md, format spec in `agent_docs/`.
+
+**Classification test:** "If I removed this from CLAUDE.md, would Claude's behavior change on tasks that don't directly involve this topic?" YES = instruction, NO = reference data.
+
+### 6. Propose extractions
+
+Present findings to the user one at a time, grouped by type:
+
+1. **CLAUDE.md baseline improvements** — diff + integration proposal
+2. **Modified commands** — diff + universal vs. project-specific assessment
+3. **Novel commands** — content + generalized version proposal
+4. **Novel agents** — same as novel commands
+5. **Modified agent_docs** — diff + universal vs. project-specific assessment
+6. **Novel agent_docs** — content + generalized version proposal
+7. **New baseline permissions** — list + include/skip recommendation
+8. **MCP server changes** — diffs + include/skip recommendation
+
+For each item present: **What**, **Generalization**, **Recommendation** (Include / Skip / Needs manual editing).
+
+Wait for user approval before moving to the next.
+
+### 7. Budget check
+
+After drafting each proposed change:
+1. Simulate the change — what would the target file look like?
+2. Count lines and instructions against the budget
+3. If within budget: proceed to approval
+4. If over budget: present options:
+   - **Compress:** Rewrite more concisely
+   - **Relocate:** Move to `agent_docs/` instead of CLAUDE.md
+   - **Replace:** Identify a superseded instruction, propose swap
+   - **Override:** Accept violation with noted justification
+
+Never silently exceed a budget.
+
+### 8. Elevation test
+
+For each proposed extraction, determine the minimum viable level:
+
+- **Level 0 (command file):** Only applies during a specific workflow step? Stop here.
+- **Level 1 (agent_docs/):** Reference data, format spec, or checklist? Stop here.
+- **Level 2 (CLAUDE.md project-specific):** Project convention, not universal? Stop here.
+- **Level 3 (CLAUDE.md baseline):** Removing it changes behavior on unrelated tasks? Add to baseline.
+
+Present the recommended level alongside each proposal. User can override but default to the lowest level.
+
+### 9. Apply approved changes
+
+For each approved item:
+- Update the corresponding file in `golden/`
+- For novel items, create the new file in the appropriate `golden/` subdirectory
+
+**Changelog entry:** Append to `golden/CHANGELOG.md`:
+
+```markdown
+## [Date] — /improve-golden-set from [project-name]
+
+### Added / Changed / Removed
+- Use the heading(s) that apply. **Added** for new files/sections, **Changed**
+  for rewrites or restructures of existing ones, **Removed** for deletions.
+- [file or section] (Level N) — [what changed and source description]
+
+### Moved
+- [content]: [old location] -> [new location] (Level N -> Level M)
+
+### Why
+- Optional. Include when the rationale isn't self-evident — e.g. the real-world
+  use that proved the change out, or a gotcha worth recording.
+
+### Budget impact
+- One line per budgeted file touched, as `NN -> NN lines` against its `BUDGETS.md` limit.
+- e.g. CLAUDE.md baseline: NN/60 -> NN/60 (+/-N); command files: NN/300 -> NN/300.
+```
+
+Do NOT commit. Let the user review and commit manually.
+
+### 10. Summary
+
+```
+## Extraction Complete
+
+### Changes Applied:
+- golden/CLAUDE.md: [description]
+- golden/.claude/commands/[name].md: [created / updated]
+- golden/.claude/agents/[name].md: [created / updated]
+- golden/agent_docs/[name].md: [created / updated]
+- golden/.claude/settings.local.json: [permissions added]
+- golden/.mcp.json: [servers added / updated]
+
+### Skipped (project-specific):
+- [list of items reviewed but skipped]
+
+### Next Steps (local mode):
+1. Review the changes in golden/
+2. Run `git diff` to verify everything looks correct
+3. Commit when satisfied
+
+### Next Steps (GitHub mode):
+1. PR created at: [URL]
+2. Review the PR on GitHub
+3. Merge when satisfied
+```
+
+### 10b. Push to GitHub (GitHub mode only)
+
+If running in GitHub mode, push the approved changes as a PR:
+
+```bash
+# Clone the golden set repo to a temp directory
+gh repo clone OWNER/REPO /tmp/golden-set-update
+cd /tmp/golden-set-update
+
+# Create a branch
+git checkout -b improve/$(date +%Y%m%d)-$(basename $PROJECT_DIR)
+
+# Apply the approved changes to golden/
+# ... copy files ...
+
+# Commit and push
+git add golden/
+git commit -m "improve: extract improvements from PROJECT_NAME"
+git push -u origin HEAD
+
+# Create PR
+gh pr create --title "improve: extract improvements from PROJECT_NAME" --body "..."
+```
+
+Report the PR URL to the user.
+
+### 11. Budget health check
+
+After applying approved extractions:
+1. Measure all budgeted files against `BUDGETS.md`
+2. Report current utilization for each file
+3. If any file exceeds 80% of its budget, recommend `/slim`
+4. If any file exceeds 100%, require user to run `/slim` or explicitly override
+
+## Rules
+
+- NEVER extract content from below the bootstrap marker in CLAUDE.md
+- NEVER extract native memory (harness-managed) content
+- NEVER extract governance files (`BUDGETS.md`, `CHANGELOG.md`)
+- NEVER extract project-specific permissions (language/tool-specific)
+- NEVER auto-commit — always leave changes for user review
+- ALWAYS present each extraction for approval before applying
+- ALWAYS generalize before extracting — strip project-specific references
+- If the golden set already has a similar concept, update the existing item rather than adding a duplicate
