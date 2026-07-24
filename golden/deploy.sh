@@ -101,6 +101,10 @@ fi
 cp "$GOLDEN_DIR/BUDGETS.md" "$TARGET/BUDGETS.md"
 echo "[+] BUDGETS.md"
 
+# AGENTS.md — OpenCode-facing pointer to CLAUDE.md (no project-specific content; safe to overwrite)
+cp "$GOLDEN_DIR/AGENTS.md" "$TARGET/AGENTS.md"
+echo "[+] AGENTS.md"
+
 # .claude/ directory structure
 mkdir -p "$TARGET/.claude/commands"
 mkdir -p "$TARGET/.claude/agents/extensions"
