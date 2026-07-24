@@ -128,6 +128,20 @@ Invoke the Planner agent to enrich the issue with specs:
 
 The Planner reads the state file + memory (bug patterns, spec gaps, calibration) and appends spec sections to the issue body: schema changes, API changes, implementation hints, known pitfalls, estimated effort.
 
+**Freshness check first (cheap, two commands).** Compare the state file's `last_indexed` and version
+fields against current HEAD and the project's version single-source:
+
+```bash
+grep -E "^(last_indexed|api_version|git_branch):" .claude/project-state.md
+git log --oneline -1
+```
+
+If it has drifted, either run a targeted re-index for the areas this issue touches, or state the
+staleness explicitly in the Planner prompt ("the state file is stale as of `<commit>`; verify
+endpoint/schema claims against the code before relying on them"). Never let Planner silently treat a
+stale state file as current — its specs become premises that the Builder implements and the Reviewer
+validates against.
+
 ### 5. Branch
 
 ```bash
@@ -233,9 +247,33 @@ When all milestone issues are closed:
 2. **Run `/review-pr` on the release PR (hard gate)** — catches cross-issue interactions that per-issue reviews miss
 3. If review returns REQUEST_CHANGES: fix findings, re-review (max 3 iterations)
 4. Run `/release-notes` to generate the full release PR description
-5. Mark draft PR ready for review: `gh pr ready RELEASE_PR_NUMBER`
-6. Do NOT auto-merge to main
-7. Report: milestone complete, PR number, issue count
+5. **Re-index the codebase state (hard gate)** — see below
+6. Mark draft PR ready for review: `gh pr ready RELEASE_PR_NUMBER`
+7. Do NOT auto-merge to main
+8. Report: milestone complete, PR number, issue count, state-file freshness
+
+### Step 5 detail — Re-index at release completion
+
+A release is the largest single source of index drift, and the next release's Planner treats the
+state file as fact. Leaving it stale converts a helpful oracle into a confident wrong answer. This
+step is **not optional and not deferrable to the next `/setup-release`** — that deferral is how a
+state file goes unverified across several releases while still reading as authoritative.
+
+```
+Use indexer. Re-index this project for the just-completed release. Bring Meta current (version,
+HEAD, branch, dependency and schema versions), re-verify every area the release touched (derive the
+set from `git diff --stat <previous release tag>..HEAD`), reconcile the endpoint map against the
+router, correct any issue described as open that has since closed, resolve the drift log, and state
+explicitly what you did NOT verify.
+```
+
+Note the release PR has not merged to the default branch at this point (step 7) — the state file
+should describe the release branch and record that the merge is pending.
+
+**Verify the index landed** before marking the PR ready. A subagent's report is a claim, not
+evidence: re-read the state file yourself and confirm `last_indexed` and the version field moved, and
+that the drift log carries a fresh resolution note naming its own coverage gaps. If the report and
+the file disagree, trust the file.
 
 ## Discovery Escape Hatch
 
@@ -260,6 +298,8 @@ Individual failures are logged and skipped, not terminal.
 - ALWAYS follow architecture rules from CLAUDE.md
 - ALWAYS use project's validation command as hard gate
 - ALWAYS practice TDD — tests before implementation
+- ALWAYS re-index at release completion and verify the state file actually changed — a stale index is a high-authority wrong answer, not a missing one
+- NEVER run Planner against a state file known to be stale without saying so in the prompt
 - NEVER force-push or rewrite history
 - NEVER skip validation
 - One issue per feature branch

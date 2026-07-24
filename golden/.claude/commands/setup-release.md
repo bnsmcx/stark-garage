@@ -57,15 +57,37 @@ Aggregate results into a scope summary:
 - **Risk distribution**: count of CONTAINED / MODERATE / WIDE assessments
 - **Hotspots**: files that appear in multiple blast-radius reports (high-change areas)
 
-### 4. Indexer Invocation
+### 4. Indexer Invocation (staleness-gated)
 
-Invoke the Indexer agent to build or refresh the codebase state file so Planner has fresh context:
+Planner reads the state file as fact, so a stale index is not a missing oracle — it is a
+high-authority wrong answer. Check freshness **before** deciding what to index:
+
+```bash
+grep -E "^(last_indexed|api_version|git_branch):" .claude/project-state.md
+git log --oneline -1
+```
+
+Compare against reality — the version single-source named in CLAUDE.md, current HEAD, and any
+releases shipped since `last_indexed`. Then:
+
+| State | Action |
+|---|---|
+| Fresh (matches HEAD + version, no unresolved drift-log entries) | Skip — say so explicitly |
+| Stale, or drift-log entries unresolved, or any detail file marked UNVERIFIED | **Re-index — blocking** |
+| No state file | **Full index — blocking** |
 
 ```
-Use indexer. Index this project.
+Use indexer. Re-index this project. Bring Meta current, reconcile the endpoint map against the
+router, resolve the drift log, and state explicitly what you did NOT verify.
 ```
 
-Wait for the index to complete before proceeding to dependency analysis. If the Indexer is not available, note this and proceed — the index step is recommended but not blocking.
+Wait for the index to complete before proceeding. **A stale index blocks** — do not run Planner
+against it. If the Indexer is genuinely unavailable, stop and tell the user rather than proceeding
+with specs built on stale context.
+
+Then verify the index actually landed (a subagent report is a claim, not evidence): re-run the `grep`
+above and confirm `last_indexed` and the version field moved, and that the drift log carries a fresh
+resolution note naming its coverage gaps.
 
 ### 5. Dependency analysis
 
