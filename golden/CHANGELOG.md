@@ -1,5 +1,25 @@
 # Changelog
 
+## 2026-07-24 — v1.3.0: OpenCode command generator (#33)
+
+### Added
+- `golden/scripts/gen-opencode.sh` — derives `.opencode/commands/*.md` from `.claude/commands/*.md`
+  (the single source of truth): drops `name`/`user_invocable`, keeps `description`, applies overrides,
+  copies the body verbatim. `--check` mode regenerates to a temp dir and diffs vs the committed output
+  (fails on drift). Uses only bash/awk/sed — no yq/jq/python.
+- `golden/commands/opencode.map` — sidecar for per-command OpenCode frontmatter overrides
+  (agent/model/subtask). Currently empty; the mechanism awaits agent routing (#36).
+- `golden/.opencode/commands/*.md` — 14 generated + committed OpenCode command files.
+
+### Changed
+- `golden/tests/smoke-test.sh` — new assertion: `.opencode/commands` stays in sync with
+  `.claude/commands` (runs `gen-opencode.sh --check`).
+
+### Notes
+- Architecture: `.opencode` is **derived from `.claude`** (which stays canonical) rather than both being
+  generated from a separate `definitions/` source — no command migration, no byte-equivalence proof.
+  First step of the OpenCode cross-tool portability epic (#43); #34 wires `deploy.sh` to ship it.
+
 ## 2026-07-22 — /improve-golden-set from Athena v2 services
 
 ### Removed

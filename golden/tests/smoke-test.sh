@@ -48,6 +48,9 @@ echo "--- Deploying ---"
 "$SCRIPT_DIR/deploy.sh" "$TARGET" 2>&1 | sed 's/^/  /'
 echo ""
 
+# --- Golden-source integrity: .opencode/commands must be regenerable from .claude/commands ---
+check ".opencode/commands in sync with .claude/commands" bash "$SCRIPT_DIR/scripts/gen-opencode.sh" --check
+
 # --- Verify structure ---
 echo "--- Verifying Structure ---"
 
