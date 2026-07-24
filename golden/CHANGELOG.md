@@ -1,5 +1,30 @@
 # Changelog
 
+## 2026-07-24 — mandatory re-index (from Athena v2 services, ships in v1.3.0)
+
+### Changed
+- `/wiggum` Release Completion — new **hard-gate step 5: re-index the codebase state**, with an
+  explicit instruction to verify the state file actually changed rather than trusting the Indexer's
+  report. Releases are the largest source of index drift, and deferring the re-index to the next
+  `/setup-release` is how a state file goes unverified across several releases while still reading as
+  authoritative.
+- `/wiggum` Step 4 (Planner Enrichment) — cheap two-command freshness check before invoking Planner.
+  If the state file has drifted, either re-index the touched areas or declare the staleness in the
+  Planner prompt. A stale state file becomes premises the Builder implements and the Reviewer
+  validates against.
+- `/setup-release` Step 4 — the Indexer invocation is now **staleness-gated and blocking** (was
+  "recommended but not blocking"), with a decision table and a post-index verification step. If the
+  Indexer is unavailable, stop and ask rather than running Planner on stale context.
+- `/wiggum` Rules — two new rules covering the above.
+
+### Notes
+- Motivating incident: an Athena v2 services state file sat at `api_version: 0.27.2` after 0.28.0
+  had shipped, with its own drift log admitting two detail files were "UNVERIFIED this pass." A stale
+  pre-computed oracle is a *high-authority wrong answer*, which is worse than an absent one.
+- Related discovery issues: #48 (planner→builder→reviewer never validates a spec's premises),
+  #49 (subagent reports consumed as sources without verification). The "verify the file, not the
+  report" wording here is a local instance of #49 and may be superseded by a general convention.
+
 ## 2026-07-24 — v1.3.0: OpenCode command generator (#33)
 
 ### Added
