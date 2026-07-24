@@ -1,5 +1,25 @@
 # Changelog
 
+## 2026-07-24 — v1.3.0: port agents to .opencode/agents (#36)
+
+### Added
+- `golden/.opencode/agents/*.md` — 7 agents generated from `.claude/agents/` (frontmatter:
+  `description` + `mode: subagent`; body verbatim). `gen-opencode.sh` now emits both commands and
+  agents; `--check` covers both.
+- `deploy.sh` deploys `.opencode/agents/`; `smoke-test.sh` asserts the count matches `.claude/agents/`.
+
+### Portability decision (per-agent)
+- **All 7 agents port** (builder, debugger, indexer, ops-reviewer, planner, reviewer, security-reviewer)
+  as OpenCode **subagents** — their bodies are tool-agnostic process/verdict instructions.
+- **`model` is dropped** in the OpenCode form: Claude Code aliases (indexer's `model: sonnet`) are not
+  valid OpenCode `provider/model` identifiers, so ported agents use OpenCode's configured default.
+  Per-agent model/permission tuning (OpenCode's richer permission model) is left as future refinement.
+- **browser-automation skill** needs no port — OpenCode lists `.claude/skills/` as a discovery path, so
+  the deployed skill works as-is.
+
+### Notes
+- Fourth step of the OpenCode portability epic (#43). `.opencode` remains fully derived from `.claude`.
+
 ## 2026-07-24 — v1.3.0: AGENTS.md for OpenCode rule discovery (#35)
 
 ### Added

@@ -81,6 +81,10 @@ EXPECTED_AGENTS=$(ls "$SCRIPT_DIR/.claude/agents/"*.md 2>/dev/null | wc -l)
 AGENT_COUNT=$(ls "$TARGET/.claude/agents/"*.md 2>/dev/null | wc -l)
 check "all $EXPECTED_AGENTS agents deployed" test "$AGENT_COUNT" -eq "$EXPECTED_AGENTS"
 
+# --- Verify OpenCode agents deployed (same count as Claude Code agents — 1:1 generated) ---
+OAGENT_COUNT=$(ls "$TARGET/.opencode/agents/"*.md 2>/dev/null | wc -l)
+check "all $EXPECTED_AGENTS OpenCode agents deployed" test "$OAGENT_COUNT" -eq "$EXPECTED_AGENTS"
+
 # --- Verify specific files ---
 check_file "wiggum.md exists" "$TARGET/.claude/commands/wiggum.md"
 check_file "review-pr.md exists" "$TARGET/.claude/commands/review-pr.md"

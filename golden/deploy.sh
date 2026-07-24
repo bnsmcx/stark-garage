@@ -127,6 +127,13 @@ for f in "$GOLDEN_DIR/.opencode/commands/"*.md; do
   echo "[+] .opencode/commands/$(basename "$f")"
 done
 
+# Agents (OpenCode) — generated from .claude/agents by scripts/gen-opencode.sh
+mkdir -p "$TARGET/.opencode/agents"
+for f in "$GOLDEN_DIR/.opencode/agents/"*.md; do
+  cp "$f" "$TARGET/.opencode/agents/"
+  echo "[+] .opencode/agents/$(basename "$f")"
+done
+
 # Agents
 for f in "$GOLDEN_DIR/.claude/agents/"*.md; do
   cp "$f" "$TARGET/.claude/agents/"
