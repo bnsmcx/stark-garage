@@ -109,11 +109,18 @@ mkdir -p "$TARGET/.claude/state"
 mkdir -p "$TARGET/.claude/reviews"
 mkdir -p "$TARGET/.claude/builder/checkpoints"
 mkdir -p "$TARGET/.claude/autopilot"
+mkdir -p "$TARGET/.opencode/commands"
 
-# Commands
+# Commands (Claude Code)
 for f in "$GOLDEN_DIR/.claude/commands/"*.md; do
   cp "$f" "$TARGET/.claude/commands/"
   echo "[+] .claude/commands/$(basename "$f")"
+done
+
+# Commands (OpenCode) — generated from .claude/commands by scripts/gen-opencode.sh
+for f in "$GOLDEN_DIR/.opencode/commands/"*.md; do
+  cp "$f" "$TARGET/.opencode/commands/"
+  echo "[+] .opencode/commands/$(basename "$f")"
 done
 
 # Agents
@@ -215,9 +222,10 @@ fi
 
 echo ""
 CMDS=$(ls "$TARGET/.claude/commands/"*.md 2>/dev/null | wc -l)
+OCMDS=$(ls "$TARGET/.opencode/commands/"*.md 2>/dev/null | wc -l)
 AGENTS=$(ls "$TARGET/.claude/agents/"*.md 2>/dev/null | wc -l)
 echo "Installed:"
-echo "  $CMDS commands"
+echo "  $CMDS commands (Claude Code) + $OCMDS commands (OpenCode)"
 echo "  $AGENTS agents"
 echo "  agent_docs/, skills/"
 echo ""
