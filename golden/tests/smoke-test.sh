@@ -64,11 +64,16 @@ check_dir  ".claude/agents/ exists" "$TARGET/.claude/agents"
 check_dir  ".claude/agents/extensions/ exists" "$TARGET/.claude/agents/extensions"
 check_dir  ".claude/skills/browser-automation/ exists" "$TARGET/.claude/skills/browser-automation"
 check_dir  "agent_docs/ exists" "$TARGET/agent_docs"
+check_dir  ".opencode/commands/ exists" "$TARGET/.opencode/commands"
 
 # --- Verify command count matches the golden source (no magic number; catches drift + deletions) ---
 EXPECTED_CMDS=$(ls "$SCRIPT_DIR/.claude/commands/"*.md 2>/dev/null | wc -l)
 CMD_COUNT=$(ls "$TARGET/.claude/commands/"*.md 2>/dev/null | wc -l)
 check "all $EXPECTED_CMDS commands deployed" test "$CMD_COUNT" -eq "$EXPECTED_CMDS"
+
+# --- Verify OpenCode commands deployed (same count as Claude Code — 1:1 generated) ---
+OCMD_COUNT=$(ls "$TARGET/.opencode/commands/"*.md 2>/dev/null | wc -l)
+check "all $EXPECTED_CMDS OpenCode commands deployed" test "$OCMD_COUNT" -eq "$EXPECTED_CMDS"
 
 # --- Verify agent count matches the golden source ---
 EXPECTED_AGENTS=$(ls "$SCRIPT_DIR/.claude/agents/"*.md 2>/dev/null | wc -l)

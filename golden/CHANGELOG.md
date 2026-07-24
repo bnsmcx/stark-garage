@@ -1,5 +1,18 @@
 # Changelog
 
+## 2026-07-24 — v1.3.0: deploy .opencode/commands (#34)
+
+### Changed
+- `deploy.sh` now installs `.opencode/commands/*.md` into target projects (alongside
+  `.claude/commands/`), so OpenCode discovers the same commands. Install summary reports both counts.
+- `tests/smoke-test.sh` — asserts `.opencode/commands/` is deployed with the same count as
+  `.claude/commands/` (1:1 generated).
+
+### Notes
+- Second step of the OpenCode portability epic (#43), on the #33 generator. Command bodies are
+  tool-agnostic (`$ARGUMENTS`/`$1`), so the deployed OpenCode commands are functionally equivalent;
+  interactive TUI confirmation is a manual/downstream check.
+
 ## 2026-07-24 — mandatory re-index (from Athena v2 services, ships in v1.3.0)
 
 ### Changed
