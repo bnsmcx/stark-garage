@@ -94,14 +94,46 @@ check_dir() {
   fi
 }
 
+# command_index -> prints "- `/name` — description" for every command (from frontmatter)
+command_index() {
+  local src name desc
+  for src in "$GOLDEN_DIR/.claude/commands/"*.md; do
+    [ -e "$src" ] || continue
+    name="$(basename "$src" .md)"
+    desc="$(awk '
+      NR==1 && $0=="---" { f=1; next }
+      f && $0=="---"     { exit }
+      f && sub(/^description:[[:space:]]*/, "") { print; exit }
+    ' "$src")"
+    printf -- '- `/%s` — %s\n' "$name" "$desc"
+  done
+}
+
+# write_agents_index <agents.md> -> replaces the content between the BEGIN/END markers with the index
+write_agents_index() {
+  local file="$1" idx tmp
+  idx="$(mktemp)"; command_index > "$idx"
+  tmp="$(mktemp)"
+  awk '{print} /BEGIN generated command index/{exit}' "$file" > "$tmp"   # head, through BEGIN
+  cat "$idx" >> "$tmp"                                                    # generated index
+  awk '/END generated command index/{f=1} f{print}' "$file" >> "$tmp"    # END, through EOF
+  rm -f "$idx"; mv "$tmp" "$file"
+}
+
 if [ "$CHECK" -eq 1 ]; then
   gen_dir commands "$GOLDEN_DIR/.claude/commands" "$TMP/commands"
   gen_dir agents   "$GOLDEN_DIR/.claude/agents"   "$TMP/agents"
+  cp "$GOLDEN_DIR/AGENTS.md" "$TMP/AGENTS.md"; write_agents_index "$TMP/AGENTS.md"
   rc=0
   check_dir "$GOLDEN_DIR/.opencode/commands" "$TMP/commands" || rc=1
   check_dir "$GOLDEN_DIR/.opencode/agents"   "$TMP/agents"   || rc=1
-  [ "$rc" -eq 0 ] && echo "[+] .opencode/ is up to date with .claude/" || exit 1
+  if ! diff "$GOLDEN_DIR/AGENTS.md" "$TMP/AGENTS.md" >/dev/null 2>&1; then
+    echo "[!] AGENTS.md command index is stale — run: golden/scripts/gen-opencode.sh" >&2
+    diff "$GOLDEN_DIR/AGENTS.md" "$TMP/AGENTS.md" >&2 || true; rc=1
+  fi
+  [ "$rc" -eq 0 ] && echo "[+] .opencode/ + AGENTS.md up to date with .claude/" || exit 1
 else
   gen_dir commands "$GOLDEN_DIR/.claude/commands" "$GOLDEN_DIR/.opencode/commands"
   gen_dir agents   "$GOLDEN_DIR/.claude/agents"   "$GOLDEN_DIR/.opencode/agents"
+  write_agents_index "$GOLDEN_DIR/AGENTS.md"
 fi

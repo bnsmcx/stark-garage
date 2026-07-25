@@ -1,5 +1,17 @@
 # Changelog
 
+## 2026-07-25 — v1.3.0: generated command index in AGENTS.md (#57)
+
+### Added
+- `gen-opencode.sh` now generates a command index (`/name` + description from frontmatter) into a
+  marked block in `AGENTS.md`, so OpenCode's agent — which loads `AGENTS.md` into context — is aware
+  of the available commands and can suggest/use them proactively. `--check` covers `AGENTS.md` drift.
+
+### Why
+- Downstream OpenCode test: `.opencode/commands` are auto-discovered (invocation works), but OpenCode
+  does not inject the command roster into the agent's context the way Claude Code does. A generated
+  index in the loaded rules file closes that proactive-awareness gap without drift.
+
 ## 2026-07-24 — v1.3.0: port agents to .opencode/agents (#36)
 
 ### Added
