@@ -8,3 +8,7 @@ BUDGETS.md
 .mcp.json
 .claude/
 agent_docs/
+# Anchored to the repo root so these ignore only the top-level dogfood, NOT the
+# tracked golden/.opencode and golden/AGENTS.md (release content).
+/.opencode/
+/AGENTS.md
