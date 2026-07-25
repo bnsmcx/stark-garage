@@ -101,6 +101,10 @@ fi
 cp "$GOLDEN_DIR/BUDGETS.md" "$TARGET/BUDGETS.md"
 echo "[+] BUDGETS.md"
 
+# AGENTS.md — OpenCode-facing pointer to CLAUDE.md (no project-specific content; safe to overwrite)
+cp "$GOLDEN_DIR/AGENTS.md" "$TARGET/AGENTS.md"
+echo "[+] AGENTS.md"
+
 # .claude/ directory structure
 mkdir -p "$TARGET/.claude/commands"
 mkdir -p "$TARGET/.claude/agents/extensions"
@@ -109,11 +113,25 @@ mkdir -p "$TARGET/.claude/state"
 mkdir -p "$TARGET/.claude/reviews"
 mkdir -p "$TARGET/.claude/builder/checkpoints"
 mkdir -p "$TARGET/.claude/autopilot"
+mkdir -p "$TARGET/.opencode/commands"
 
-# Commands
+# Commands (Claude Code)
 for f in "$GOLDEN_DIR/.claude/commands/"*.md; do
   cp "$f" "$TARGET/.claude/commands/"
   echo "[+] .claude/commands/$(basename "$f")"
+done
+
+# Commands (OpenCode) — generated from .claude/commands by scripts/gen-opencode.sh
+for f in "$GOLDEN_DIR/.opencode/commands/"*.md; do
+  cp "$f" "$TARGET/.opencode/commands/"
+  echo "[+] .opencode/commands/$(basename "$f")"
+done
+
+# Agents (OpenCode) — generated from .claude/agents by scripts/gen-opencode.sh
+mkdir -p "$TARGET/.opencode/agents"
+for f in "$GOLDEN_DIR/.opencode/agents/"*.md; do
+  cp "$f" "$TARGET/.opencode/agents/"
+  echo "[+] .opencode/agents/$(basename "$f")"
 done
 
 # Agents
@@ -215,9 +233,10 @@ fi
 
 echo ""
 CMDS=$(ls "$TARGET/.claude/commands/"*.md 2>/dev/null | wc -l)
+OCMDS=$(ls "$TARGET/.opencode/commands/"*.md 2>/dev/null | wc -l)
 AGENTS=$(ls "$TARGET/.claude/agents/"*.md 2>/dev/null | wc -l)
 echo "Installed:"
-echo "  $CMDS commands"
+echo "  $CMDS commands (Claude Code) + $OCMDS commands (OpenCode)"
 echo "  $AGENTS agents"
 echo "  agent_docs/, skills/"
 echo ""

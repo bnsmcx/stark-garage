@@ -1,5 +1,108 @@
 # Changelog
 
+## 2026-07-25 — v1.3.0: generated command index in AGENTS.md (#57)
+
+### Added
+- `gen-opencode.sh` now generates a command index (`/name` + description from frontmatter) into a
+  marked block in `AGENTS.md`, so OpenCode's agent — which loads `AGENTS.md` into context — is aware
+  of the available commands and can suggest/use them proactively. `--check` covers `AGENTS.md` drift.
+
+### Why
+- Downstream OpenCode test: `.opencode/commands` are auto-discovered (invocation works), but OpenCode
+  does not inject the command roster into the agent's context the way Claude Code does. A generated
+  index in the loaded rules file closes that proactive-awareness gap without drift.
+
+## 2026-07-24 — v1.3.0: port agents to .opencode/agents (#36)
+
+### Added
+- `golden/.opencode/agents/*.md` — 7 agents generated from `.claude/agents/` (frontmatter:
+  `description` + `mode: subagent`; body verbatim). `gen-opencode.sh` now emits both commands and
+  agents; `--check` covers both.
+- `deploy.sh` deploys `.opencode/agents/`; `smoke-test.sh` asserts the count matches `.claude/agents/`.
+
+### Portability decision (per-agent)
+- **All 7 agents port** (builder, debugger, indexer, ops-reviewer, planner, reviewer, security-reviewer)
+  as OpenCode **subagents** — their bodies are tool-agnostic process/verdict instructions.
+- **`model` is dropped** in the OpenCode form: Claude Code aliases (indexer's `model: sonnet`) are not
+  valid OpenCode `provider/model` identifiers, so ported agents use OpenCode's configured default.
+  Per-agent model/permission tuning (OpenCode's richer permission model) is left as future refinement.
+- **browser-automation skill** needs no port — OpenCode lists `.claude/skills/` as a discovery path, so
+  the deployed skill works as-is.
+
+### Notes
+- Fourth step of the OpenCode portability epic (#43). `.opencode` remains fully derived from `.claude`.
+
+## 2026-07-24 — v1.3.0: AGENTS.md for OpenCode rule discovery (#35)
+
+### Added
+- `golden/AGENTS.md` — thin, zero-duplication pointer that makes `CLAUDE.md` the single source of
+  project rules for `AGENTS.md`-aware tools (OpenCode), with an `@CLAUDE.md` import + prose fallback
+  and OpenCode-specific orientation notes. No content duplication, so nothing to drift.
+- `deploy.sh` deploys `AGENTS.md`; `smoke-test.sh` asserts it lands in the target.
+
+### Notes
+- OpenCode reads `AGENTS.md` as primary (falls back to `CLAUDE.md` only when absent), so the pointer is
+  load-bearing; kept as a reference rather than a copy to avoid drift with each project's CLAUDE.md.
+  Third step of the OpenCode portability epic (#43).
+
+## 2026-07-24 — v1.3.0: deploy .opencode/commands (#34)
+
+### Changed
+- `deploy.sh` now installs `.opencode/commands/*.md` into target projects (alongside
+  `.claude/commands/`), so OpenCode discovers the same commands. Install summary reports both counts.
+- `tests/smoke-test.sh` — asserts `.opencode/commands/` is deployed with the same count as
+  `.claude/commands/` (1:1 generated).
+
+### Notes
+- Second step of the OpenCode portability epic (#43), on the #33 generator. Command bodies are
+  tool-agnostic (`$ARGUMENTS`/`$1`), so the deployed OpenCode commands are functionally equivalent;
+  interactive TUI confirmation is a manual/downstream check.
+
+## 2026-07-24 — mandatory re-index (from Athena v2 services, ships in v1.3.0)
+
+### Changed
+- `/wiggum` Release Completion — new **hard-gate step 5: re-index the codebase state**, with an
+  explicit instruction to verify the state file actually changed rather than trusting the Indexer's
+  report. Releases are the largest source of index drift, and deferring the re-index to the next
+  `/setup-release` is how a state file goes unverified across several releases while still reading as
+  authoritative.
+- `/wiggum` Step 4 (Planner Enrichment) — cheap two-command freshness check before invoking Planner.
+  If the state file has drifted, either re-index the touched areas or declare the staleness in the
+  Planner prompt. A stale state file becomes premises the Builder implements and the Reviewer
+  validates against.
+- `/setup-release` Step 4 — the Indexer invocation is now **staleness-gated and blocking** (was
+  "recommended but not blocking"), with a decision table and a post-index verification step. If the
+  Indexer is unavailable, stop and ask rather than running Planner on stale context.
+- `/wiggum` Rules — two new rules covering the above.
+
+### Notes
+- Motivating incident: an Athena v2 services state file sat at `api_version: 0.27.2` after 0.28.0
+  had shipped, with its own drift log admitting two detail files were "UNVERIFIED this pass." A stale
+  pre-computed oracle is a *high-authority wrong answer*, which is worse than an absent one.
+- Related discovery issues: #48 (planner→builder→reviewer never validates a spec's premises),
+  #49 (subagent reports consumed as sources without verification). The "verify the file, not the
+  report" wording here is a local instance of #49 and may be superseded by a general convention.
+
+## 2026-07-24 — v1.3.0: OpenCode command generator (#33)
+
+### Added
+- `golden/scripts/gen-opencode.sh` — derives `.opencode/commands/*.md` from `.claude/commands/*.md`
+  (the single source of truth): drops `name`/`user_invocable`, keeps `description`, applies overrides,
+  copies the body verbatim. `--check` mode regenerates to a temp dir and diffs vs the committed output
+  (fails on drift). Uses only bash/awk/sed — no yq/jq/python.
+- `golden/commands/opencode.map` — sidecar for per-command OpenCode frontmatter overrides
+  (agent/model/subtask). Currently empty; the mechanism awaits agent routing (#36).
+- `golden/.opencode/commands/*.md` — 14 generated + committed OpenCode command files.
+
+### Changed
+- `golden/tests/smoke-test.sh` — new assertion: `.opencode/commands` stays in sync with
+  `.claude/commands` (runs `gen-opencode.sh --check`).
+
+### Notes
+- Architecture: `.opencode` is **derived from `.claude`** (which stays canonical) rather than both being
+  generated from a separate `definitions/` source — no command migration, no byte-equivalence proof.
+  First step of the OpenCode cross-tool portability epic (#43); #34 wires `deploy.sh` to ship it.
+
 ## 2026-07-22 — /improve-golden-set from Athena v2 services
 
 ### Removed

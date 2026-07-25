@@ -1,7 +1,5 @@
 ---
-name: setup-release
 description: Plan a release — blast-radius analysis, index the codebase, scope issues, create milestone, branch, and phased implementation plan
-user_invocable: true
 ---
 
 # /setup-release — Release Planning

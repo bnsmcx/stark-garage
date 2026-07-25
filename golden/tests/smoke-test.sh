@@ -48,10 +48,16 @@ echo "--- Deploying ---"
 "$SCRIPT_DIR/deploy.sh" "$TARGET" 2>&1 | sed 's/^/  /'
 echo ""
 
+# --- Golden-source integrity: .opencode/commands must be regenerable from .claude/commands ---
+# (--check proves committed == regenerated; body byte-identity to .claude holds because the
+#  generator copies the body verbatim — keep that invariant if the generator ever changes.)
+check ".opencode/commands in sync with .claude/commands" bash "$SCRIPT_DIR/scripts/gen-opencode.sh" --check
+
 # --- Verify structure ---
 echo "--- Verifying Structure ---"
 
 check_file "CLAUDE.md created" "$TARGET/CLAUDE.md"
+check_file "AGENTS.md created (OpenCode)" "$TARGET/AGENTS.md"
 check_file "BUDGETS.md created" "$TARGET/BUDGETS.md"
 check_file ".mcp.json created" "$TARGET/.mcp.json"
 check_dir  ".claude/commands/ exists" "$TARGET/.claude/commands"
@@ -59,16 +65,25 @@ check_dir  ".claude/agents/ exists" "$TARGET/.claude/agents"
 check_dir  ".claude/agents/extensions/ exists" "$TARGET/.claude/agents/extensions"
 check_dir  ".claude/skills/browser-automation/ exists" "$TARGET/.claude/skills/browser-automation"
 check_dir  "agent_docs/ exists" "$TARGET/agent_docs"
+check_dir  ".opencode/commands/ exists" "$TARGET/.opencode/commands"
 
 # --- Verify command count matches the golden source (no magic number; catches drift + deletions) ---
 EXPECTED_CMDS=$(ls "$SCRIPT_DIR/.claude/commands/"*.md 2>/dev/null | wc -l)
 CMD_COUNT=$(ls "$TARGET/.claude/commands/"*.md 2>/dev/null | wc -l)
 check "all $EXPECTED_CMDS commands deployed" test "$CMD_COUNT" -eq "$EXPECTED_CMDS"
 
+# --- Verify OpenCode commands deployed (same count as Claude Code — 1:1 generated) ---
+OCMD_COUNT=$(ls "$TARGET/.opencode/commands/"*.md 2>/dev/null | wc -l)
+check "all $EXPECTED_CMDS OpenCode commands deployed" test "$OCMD_COUNT" -eq "$EXPECTED_CMDS"
+
 # --- Verify agent count matches the golden source ---
 EXPECTED_AGENTS=$(ls "$SCRIPT_DIR/.claude/agents/"*.md 2>/dev/null | wc -l)
 AGENT_COUNT=$(ls "$TARGET/.claude/agents/"*.md 2>/dev/null | wc -l)
 check "all $EXPECTED_AGENTS agents deployed" test "$AGENT_COUNT" -eq "$EXPECTED_AGENTS"
+
+# --- Verify OpenCode agents deployed (same count as Claude Code agents — 1:1 generated) ---
+OAGENT_COUNT=$(ls "$TARGET/.opencode/agents/"*.md 2>/dev/null | wc -l)
+check "all $EXPECTED_AGENTS OpenCode agents deployed" test "$OAGENT_COUNT" -eq "$EXPECTED_AGENTS"
 
 # --- Verify specific files ---
 check_file "wiggum.md exists" "$TARGET/.claude/commands/wiggum.md"
