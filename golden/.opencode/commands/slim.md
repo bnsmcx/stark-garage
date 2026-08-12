@@ -1,5 +1,7 @@
 ---
+name: slim
 description: Audit the golden set for bloat, redundancy, and budget compliance — compress, prune memory, and remove content to stay within limits
+user_invocable: true
 ---
 
 # /slim — Golden Set Audit & Compression

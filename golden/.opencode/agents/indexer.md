@@ -1,4 +1,5 @@
 ---
+name: indexer
 description: Codebase indexer — deep-crawls the project to build the state file that Planner and other agents depend on
 mode: subagent
 ---

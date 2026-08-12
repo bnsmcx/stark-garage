@@ -2,11 +2,11 @@
 set -euo pipefail
 
 # Derive .opencode/ artifacts from .claude/ (the single source of truth):
-#   .opencode/commands/*.md  <- .claude/commands/*.md  (frontmatter: description [+ overrides])
-#   .opencode/agents/*.md    <- .claude/agents/*.md     (frontmatter: description + mode: subagent)
+#   .opencode/commands/*.md  <- .claude/commands/*.md  (frontmatter: name, description [+ overrides])
+#   .opencode/agents/*.md    <- .claude/agents/*.md     (frontmatter: name, description + mode: subagent)
 #
-# In both cases: drop `name` (implicit from filename) and `user_invocable`; the body (everything
-# after the closing frontmatter `---`) is copied VERBATIM. Uses only bash/awk/sed — no yq/jq/python.
+# Preserve `name` (required by OpenCode to register /slash commands) and `user_invocable`; the body
+# (everything after the closing frontmatter `---`) is copied VERBATIM. Uses only bash/awk/sed — no yq/jq/python.
 #
 # Per-command OpenCode overrides (agent/model/subtask) come from commands/opencode.map.
 # Agent `model` is intentionally NOT carried over: Claude Code aliases (e.g. `sonnet`) are not valid
@@ -40,24 +40,33 @@ override() {
 # kind: commands | agents
 emit() {
   local kind="$1" src="$2" name="$3" desc
-  desc="$(awk '
-    NR==1 && $0=="---" { f=1; next }
-    f && $0=="---"     { exit }
-    f && sub(/^description:[[:space:]]*/, "") { print; exit }
-  ' "$src")"
 
   # reject malformed source rather than silently emitting empty output (also catches CRLF: `---\r`)
   if ! head -n1 "$src" | grep -q '^---$'; then
     echo "[!] $name: source does not open with a '---' frontmatter block (CRLF line endings?)" >&2
     exit 1
   fi
+
+  # Extract description for validation (used only for the error check below)
+  desc="$(awk '
+    NR==1 && $0=="---" { f=1; next }
+    f && $0=="---"     { exit }
+    f && sub(/^description:[[:space:]]*/, "") { print; exit }
+  ' "$src")"
   if [ -z "$desc" ]; then
     echo "[!] $name: no 'description:' found in frontmatter" >&2
     exit 1
   fi
 
+  # Emit frontmatter: preserve name: + user_invocable (OpenCode requires name: to register /slash commands)
   echo "---"
-  printf 'description: %s\n' "$desc"
+  awk '
+    NR==1 && $0=="---" { f=1; next }
+    f && $0=="---"     { exit }
+    f && /^description:/ { sub(/^description:[[:space:]]*/, ""); printf "description: %s\n", $0; next }
+    f && /^name:/        { print; next }
+    f && /^user_invocable:/ { print; next }
+  ' "$src"
   if [ "$kind" = "commands" ]; then
     for k in agent model subtask; do
       v="$(override "$name" "$k")"

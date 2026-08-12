@@ -1,4 +1,5 @@
 ---
+name: ops-reviewer
 description: Observability audit — logging, error handling, health checks, timeouts, metrics instrumentation
 mode: subagent
 ---

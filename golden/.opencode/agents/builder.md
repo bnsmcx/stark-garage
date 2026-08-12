@@ -1,4 +1,5 @@
 ---
+name: builder
 description: Parallel build orchestrator — spawns sub-agents for multi-package features, manages checkpoints and crash recovery
 mode: subagent
 ---

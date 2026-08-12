@@ -1,4 +1,5 @@
 ---
+name: security-reviewer
 description: Deep security analysis — OWASP, CVE scanning, secret detection, auth coverage, input validation
 mode: subagent
 ---

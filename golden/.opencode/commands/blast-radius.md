@@ -1,5 +1,7 @@
 ---
+name: blast-radius
 description: Lightweight impact analysis — trace imports, call chains, test coverage, and downstream consumers for any code target
+user_invocable: true
 ---
 
 # /blast-radius — Impact Analysis

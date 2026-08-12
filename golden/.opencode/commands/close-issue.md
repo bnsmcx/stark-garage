@@ -1,5 +1,7 @@
 ---
+name: close-issue
 description: Validate acceptance criteria, close issue, unblock downstream, write to memory
+user_invocable: true
 ---
 
 # /close-issue — Issue Validation & Closure

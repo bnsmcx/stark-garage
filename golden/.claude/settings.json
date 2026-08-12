@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "p=$(jq -r '.tool_input.file_path // \"\"'); b=$(basename \"$p\"); if [ \"$b\" = \".env\" ] || { [ \"${b#.env.}\" != \"$b\" ] && [ \"$b\" != \".env.example\" ]; }; then echo \"PreToolUse block: '$p' looks like an env/secret file. No credentials or .env files may be edited or committed (CLAUDE.md). Use .env.example for templates.\" >&2; exit 2; fi; exit 0"
+          }
+        ]
+      }
+    ]
+  }
+}

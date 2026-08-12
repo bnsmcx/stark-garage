@@ -1,4 +1,5 @@
 ---
+name: reviewer
 description: Deep code review agent — spec compliance, cross-package consistency, structured verdict
 mode: subagent
 ---
