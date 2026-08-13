@@ -1,5 +1,7 @@
 ---
+name: investigate
 description: Research a feature request — deep-dive the codebase, probe the local API, surface tradeoffs, and iterate toward a plan ready for /create-issues
+user_invocable: true
 ---
 
 # /investigate — Feature Request Research Pipeline

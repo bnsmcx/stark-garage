@@ -1,5 +1,7 @@
 ---
+name: triage
 description: Analyze the issue backlog — dependency graph, readiness, label validation, and prioritization
+user_invocable: true
 ---
 
 # /triage — Backlog Analysis

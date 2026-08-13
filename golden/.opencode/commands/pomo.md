@@ -1,5 +1,7 @@
 ---
+name: pomo
 description: Post-mortem reflection — capture lessons and write to memory
+user_invocable: true
 ---
 
 # /pomo — Post-Mortem

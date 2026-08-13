@@ -1,5 +1,7 @@
 ---
+name: release-notes
 description: Generate a scannable, inverted-pyramid release PR description from closed milestone issues
+user_invocable: true
 ---
 
 # /release-notes — Release PR Description Generator

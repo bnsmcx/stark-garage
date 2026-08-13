@@ -1,5 +1,7 @@
 ---
+name: bootstrap
 description: Scan the current project and adapt the full Agentic Engineering Toolbox to its tech stack, conventions, and structure
+user_invocable: true
 ---
 
 # /bootstrap — Project Configuration Adapter

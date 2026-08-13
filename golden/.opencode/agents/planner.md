@@ -1,4 +1,5 @@
 ---
+name: planner
 description: Spec generator — enriches GitHub issues with detailed implementation specs informed by codebase state and memory
 mode: subagent
 ---

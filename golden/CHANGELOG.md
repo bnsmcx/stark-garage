@@ -1,5 +1,47 @@
 # Changelog
 
+## [2026-08-12] — /improve-golden-set from armada-runtime
+
+### Changed
+- `scripts/gen-opencode.sh` — now preserves `name:` and `user_invocable` in generated frontmatter.
+  Previously dropped both (comment: "name is implicit from filename"), but OpenCode requires `name:`
+  to map `/triage` → `triage.md`. Without it, slash commands are not registered.
+- `commands/opencode.map` — updated comment to reflect that `name`/`user_invocable` are now preserved.
+- `AGENTS.md` — fixed script path references from `scripts/gen-opencode.sh` to
+  `golden/scripts/gen-opencode.sh` (script lives under `golden/`).
+- `.opencode/commands/*.md` (14 files) — regenerated with fixed script; now include `name:` and
+  `user_invocable` in frontmatter.
+- `.opencode/agents/*.md` (7 files) — regenerated with fixed script; now include `name:` in frontmatter.
+
+### Added
+- `.claude/settings.json` — PreToolUse hook that blocks editing any `.env*` files (except
+  `.env.example`). Universal security practice: prevents accidental commits of secrets.
+- `.mcp.json` — replaced `context7` server with `playwright` + `chrome-devtools`. The golden set
+  already ships a `browser-automation` skill covering these tools but didn't enable them in `.mcp.json`.
+
+### Why
+- **gen-opencode.sh fix**: A downstream project (armada-runtime) discovered that none of its
+  `.opencode/commands/*.md` files had `name:` in frontmatter, making all slash commands
+  unrecognizable in OpenCode. The root cause was the generator stripping `name:` with the
+  incorrect assumption that it was "implicit from filename."
+- **.claude/settings.json**: The armada-runtime project added a PreToolUse hook to block `.env`
+  edits — a universal security practice that prevents accidental credential commits. Generalizable
+  to all projects.
+- **.mcp.json swap**: The golden set ships a `browser-automation` skill that covers Playwright MCP
+  and Chrome DevTools MCP, but `.mcp.json` only enabled `context7`. Swapping to the browser tools
+  that the skill already documents makes the golden set self-consistent.
+
+### Skipped (reviewed but not extracted)
+- `.claude/agents/extensions/reviewer.md` (armada-runtime) — 9 project-specific review criteria
+  tied to the armada repo B1W1 split; not generalizable.
+
+### Budget impact
+- CLAUDE.md baseline: unchanged
+- Commands: unchanged (script change, no command bodies touched)
+- agent_docs/: unchanged
+- New files: `.claude/settings.json` (15 lines)
+- Modified files: `.mcp.json` (8 → 12 lines); `scripts/gen-opencode.sh` (139 → 146 lines)
+
 ## 2026-07-25 — v1.3.0: generated command index in AGENTS.md (#57)
 
 ### Added

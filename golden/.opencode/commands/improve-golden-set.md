@@ -1,5 +1,7 @@
 ---
+name: improve-golden-set
 description: Extract generalized improvements from a bootstrapped project back into the golden set
+user_invocable: true
 ---
 
 # /improve-golden-set — Golden Set Extraction

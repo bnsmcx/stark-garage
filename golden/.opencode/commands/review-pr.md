@@ -1,5 +1,7 @@
 ---
+name: review-pr
 description: Review a PR — 7-section standardized review with optional deep agent escalation
+user_invocable: true
 ---
 
 # /review-pr — Pull Request Review

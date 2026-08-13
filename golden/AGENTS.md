@@ -13,7 +13,7 @@ project rules live in [`CLAUDE.md`](./CLAUDE.md)** — read it in full; everythi
 ## OpenCode notes
 
 - **Slash commands** are in `.opencode/commands/` (generated from `.claude/commands/` — same commands,
-  same bodies; see `scripts/gen-opencode.sh`). Invoke them as `/name` in the OpenCode TUI.
+  same bodies; see `golden/scripts/gen-opencode.sh`). Invoke them as `/name` in the OpenCode TUI.
 - The **agent-pipeline commands** (`/wiggum`, `/setup-release`, `/review-pr`) were designed around
   Claude Code's subagent model. They work in OpenCode, but multi-agent fan-out and permission behavior
   differ under OpenCode's agent model — use with that awareness.
@@ -22,7 +22,7 @@ project rules live in [`CLAUDE.md`](./CLAUDE.md)** — read it in full; everythi
 ## Available commands
 
 Invoke as `/name` in the OpenCode TUI. (Generated from `.claude/commands/` frontmatter by
-`scripts/gen-opencode.sh` — do not edit the block below by hand.)
+`golden/scripts/gen-opencode.sh` — do not edit the block below by hand.)
 
 <!-- BEGIN generated command index (gen-opencode.sh) -->
 - `/blast-radius` — Lightweight impact analysis — trace imports, call chains, test coverage, and downstream consumers for any code target

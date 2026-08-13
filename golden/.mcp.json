@@ -1,8 +1,12 @@
 {
   "mcpServers": {
-    "context7": {
+    "playwright": {
       "command": "npx",
-      "args": ["-y", "@upstash/context7-mcp@latest"]
+      "args": ["-y", "@anthropic-ai/playwright-mcp@latest"]
+    },
+    "chrome-devtools": {
+      "command": "npx",
+      "args": ["-y", "chrome-devtools-mcp@latest"]
     }
   }
 }

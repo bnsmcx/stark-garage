@@ -1,5 +1,7 @@
 ---
+name: create-issues
 description: Create issues — single or batch. Auto-detects mode from input.
+user_invocable: true
 ---
 
 # /create-issues — Issue Creation

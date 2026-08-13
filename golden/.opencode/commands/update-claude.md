@@ -1,5 +1,7 @@
 ---
+name: update-claude
 description: Pull golden set updates into a bootstrapped project while preserving project-specific customizations
+user_invocable: true
 ---
 
 # /update-claude — Golden Set Update

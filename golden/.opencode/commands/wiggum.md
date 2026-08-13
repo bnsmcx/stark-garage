@@ -1,5 +1,7 @@
 ---
+name: wiggum
 description: The workhorse — single issue or autonomous release loop with full agent pipeline
+user_invocable: true
 ---
 
 # /wiggum — Development Workhorse

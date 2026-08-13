@@ -1,4 +1,5 @@
 ---
+name: debugger
 description: Bug diagnosis + automatic pattern learning — memory-first debugging, regression tests, pattern recording
 mode: subagent
 ---

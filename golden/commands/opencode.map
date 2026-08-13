@@ -1,12 +1,12 @@
 # opencode.map — per-command OpenCode frontmatter overrides.
 #
 # .claude/commands/*.md is the single source of truth. gen-opencode.sh derives
-# .opencode/commands/*.md from it: it drops `name` and `user_invocable`, keeps
+# .opencode/commands/*.md from it: preserves `name` and `user_invocable`, keeps
 # `description`, copies the body verbatim, and appends any overrides listed here.
 #
 # Format (one override per line):  <command> <key> <value>
 #   key ∈ { agent, model, subtask }
-# Commands with no entry get description-only frontmatter (the common case).
+# Commands with no entry get the full frontmatter from the source (the common case).
 #
 # Example:
 #   triage         agent    build
