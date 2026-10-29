@@ -84,7 +84,7 @@ git push -u origin 53-short-slug
 gh pr create --base main --title "type(scope): description (#53)" --body "..."
 ```
 
-Run `/review-pr` on the PR. Then run `/close-issue 53`.
+Run `/review-pr NUMBER --auto-post` on the PR. Then run `/close-issue 53`.
 
 ### 7. Done
 
@@ -241,7 +241,7 @@ Log completion summary. Check milestone progress. Select next issue. Continue.
 
 When all milestone issues are closed:
 1. Run final validation
-2. **Run `/review-pr` on the release PR (hard gate)** — catches cross-issue interactions that per-issue reviews miss
+2. **Run `/review-pr` on the release PR (hard gate, user signs off before posting)** — catches cross-issue interactions that per-issue reviews miss
 3. If review returns REQUEST_CHANGES: fix findings, re-review (max 3 iterations)
 4. Run `/release-notes` to generate the full release PR description
 5. **Re-index the codebase state (hard gate)** — see below
