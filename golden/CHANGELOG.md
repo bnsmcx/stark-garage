@@ -1,5 +1,18 @@
 # Changelog
 
+## [2026-10-29] — /review-pr collaborative sign-off (#62)
+
+### Changed
+- `/review-pr` — review is now drafted in-session and never posted without the user's explicit
+  sign-off on the final draft. New Sign-off loop lets the user ask questions, have the agent look
+  into something, run/request a manual test, edit findings/verdict, or decline to post. Posting
+  uses `gh pr review` with the approved verdict.
+- `/review-pr --auto-post` — new flag that skips sign-off; reserved for `/wiggum` ad-hoc per-issue
+  reviews so that flow stays hands-off. The `/wiggum` release-PR review remains gated on sign-off.
+
+### Why
+- Review posting is outward-facing and was fully autonomous; the user needs to own what is posted.
+
 ## [2026-08-12] — /improve-golden-set from armada-runtime
 
 ### Changed

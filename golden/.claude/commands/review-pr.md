@@ -7,6 +7,7 @@ user_invocable: true
 # /review-pr — Pull Request Review
 
 Consistent, repeatable PR review. Same checks, same order, structured verdict.
+Collaborative: the review is drafted with the user and posted only after the user approves the final draft.
 
 ## Invocation
 
@@ -14,6 +15,7 @@ Consistent, repeatable PR review. Same checks, same order, structured verdict.
 /review-pr 42              # Standard 7-section review
 /review-pr 42 --diff-only  # Skip build gates, code review only
 /review-pr 42 --deep       # Escalate to parallel agent reviewers
+/review-pr 42 --auto-post  # Skip sign-off (ad-hoc /wiggum per-issue review ONLY)
 ```
 
 ## Deep Review Escalation
@@ -100,7 +102,7 @@ Unless `--diff-only`, run the project's validation command (from CLAUDE.md):
 
 ## Output Format
 
-Post structured review on the PR:
+Draft the structured review in the session (do NOT post yet — see Sign-off):
 
 ```markdown
 ## PR Review: #NN — title
@@ -143,6 +145,33 @@ Post structured review on the PR:
 - **REQUEST_CHANGES**: Any FAIL, or multiple significant WARNs
 - **COMMENT**: No FAILs but notable WARNs
 
+## Sign-off (collaborative — required before posting)
+
+Unless `--auto-post`, the user owns the final review. Loop until the user approves or declines:
+
+1. **Present the full draft** in the session — verdict, every section, action items.
+2. **Ask what's next** (AskUserQuestion, or plain prompt if unavailable). Offer:
+   - **Post as-is** — sign off on this exact draft
+   - **Ask a question** — answer clarifying questions about findings, the diff, or reasoning
+   - **Look into something** — investigate a file, path, edge case, or concern the user names
+   - **Manual test** — run it (check out the branch, build, exercise the behavior) and report
+     what was run and observed; if it needs the user (UI, credentials, hardware), give exact steps
+     and wait for their result
+   - **Edit** — change the verdict, add/drop/reword findings or action items
+   - **Don't post** — end without posting anything
+3. **Fold results into the draft.** New evidence can change PASS/WARN/FAIL and the verdict; apply
+   Verdict Rules (never APPROVE with a FAIL — if the user insists, say so and offer COMMENT).
+   Re-present the revised draft (or a clear diff of what changed) and return to step 2.
+4. **Post only on explicit approval of the current draft** — a reply to a question is not approval:
+   ```bash
+   gh pr review NUMBER --approve|--request-changes|--comment --body-file REVIEW.md
+   ```
+   If GitHub rejects the verdict (e.g. approving your own PR), tell the user and offer `--comment`.
+   Report the posted review URL.
+
+`--auto-post` is reserved for `/wiggum` ad-hoc per-issue reviews: post the draft directly. Never use
+it for a release-PR review or when the user invoked `/review-pr` themselves.
+
 ## Self-Improvement
 
 If verdict is REQUEST_CHANGES or 2+ WARNs, AND PR was authored by Claude:
@@ -150,6 +179,7 @@ Run `/pomo` with findings as context. Skip for non-Claude PRs.
 
 ## Rules
 
+- NEVER post a review without the user's explicit sign-off on the final draft (unless `--auto-post`)
 - NEVER approve a PR with FAIL findings
 - NEVER skip a section — every section gets evaluated
 - ALWAYS show sections in the same order
